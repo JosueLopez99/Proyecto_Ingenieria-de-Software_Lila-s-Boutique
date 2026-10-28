@@ -1,5 +1,6 @@
 ﻿@page "/catalogo"
 @attribute [Authorize]
+@rendermode InteractiveServer
 @using BlazorApp1.Models
 @using BlazorApp1.Data
 @using BlazorApp1.Models.DTO
@@ -32,21 +33,32 @@
             @foreach (var item in variantes)
             {
                 <div class="col-12 col-md-4 col-lg-3 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
+                    <div class="card h-100 shadow-sm border-secondary text-white bg-dark">
+                        <div class="card-body pb-2">
                             <h5 class="card-title">@item.NombrePrenda</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">@item.CodigoPrenda</h6>
-                            <p class="card-text">
+                            <h6 class="card-subtitle mb-2 text-info">@item.CodigoPrenda</h6>
+                            <p class="card-text mb-2">
                                 <strong>Talla:</strong> @item.Talla <br />
                                 <strong>Color:</strong> @item.Color <br />
                                 <span class="badge @(item.StockFisicoActual > 0 ? "bg-success" : "bg-danger")">
                                     Stock: @item.StockFisicoActual
                                 </span>
                             </p>
+
+                            @if (cantidadesVenta.ContainsKey(item.IdVariante))
+                            {
+                                <div class="input-group input-group-sm mb-1">
+                                    <span class="input-group-text bg-secondary text-white border-secondary">Cant.</span>
+                                    <input type="number" class="form-control bg-dark text-white border-secondary" min="1" max="@item.StockFisicoActual" @bind="cantidadesVenta[item.IdVariante]" disabled="@(item.StockFisicoActual <= 0)" />
+                                </div>
+                            }
                         </div>
-                        <div class="card-footer bg-transparent">
-                            <button class="btn btn-outline-primary btn-sm w-100" disabled="@(item.StockFisicoActual <= 0)" @onclick="() => RegistrarVentaRapida(item.IdVariante)">
-                                Registrar Venta
+                        <div class="card-footer bg-transparent border-top-0 pt-0">
+                            <button class="btn btn-outline-primary btn-sm w-100 mb-2" disabled="@(item.StockFisicoActual <= 0)" @onclick="() => PrepararVenta(item)">
+                                <i class="bi bi-cart-plus"></i> Registrar Venta
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm w-100" @onclick="() => PrepararEliminacion(item)">
+                                <i class="bi bi-trash"></i> Eliminar Prenda
                             </button>
                         </div>
                     </div>
@@ -56,9 +68,53 @@
     </div>
 </div>
 
+<!-- MODAL INTEGRADO DEL SISTEMA -->
+@if (mostrarModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.65); backdrop-filter: blur(6px);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-white border-0 shadow-lg" style="border-radius: 1.25rem;">
+
+                <div class="modal-header border-0 d-flex flex-column align-items-center pt-4 pb-0">
+                    <i class="bi @modalIcono mb-2" style="font-size: 4rem; color: @modalColorIcono;"></i>
+                    <h4 class="modal-title fw-bold text-center w-100">@modalTitulo</h4>
+                </div>
+
+                <div class="modal-body text-center px-4 py-3 text-light" style="white-space: pre-line; font-size: 1.05rem;">
+                    @modalMensaje
+                </div>
+
+                <div class="modal-footer border-0 justify-content-center pb-4 pt-2">
+                    @if (!modalEsInformativo)
+                    {
+                        <button type="button" class="btn btn-outline-light px-4 rounded-pill fw-bold mx-2" @onclick="CerrarModal">
+                            Cancelar
+                        </button>
+                    }
+                    <button type="button" class="btn @modalClaseBoton px-5 rounded-pill fw-bold shadow mx-2" @onclick="EjecutarAccionConfirmada">
+                        Aceptar
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private string terminoBusqueda = "";
     private List<VarianteDTO>? variantes;
+    private Dictionary<int, int> cantidadesVenta = new();
+
+    // Variables de estado para el Modal Dinámico Vistoso
+    private bool mostrarModal = false;
+    private string modalTitulo = "";
+    private string modalMensaje = "";
+    private string modalClaseBoton = "btn-primary";
+    private string modalIcono = "bi-info-circle";
+    private string modalColorIcono = "#0dcaf0";
+    private bool modalEsInformativo = false;
+    private Func<Task>? accionPendiente;
 
     protected override async Task OnInitializedAsync()
     {
@@ -68,22 +124,108 @@
     private async Task BuscarPrendas()
     {
         variantes = await InventarioService.ObtenerVariantesAsync(terminoBusqueda);
+
+        cantidadesVenta.Clear();
+        foreach (var v in variantes)
+        {
+            cantidadesVenta[v.IdVariante] = 1;
+        }
     }
 
-    private async Task RegistrarVentaRapida(int idVariante)
+    // --- LÓGICA DE VENTAS ---
+    private void PrepararVenta(VarianteDTO item)
+    {
+        int cantidadSolicitada = cantidadesVenta[item.IdVariante];
+
+        if (cantidadSolicitada <= 0 || cantidadSolicitada > item.StockFisicoActual)
+        {
+            MostrarModalInfo("Stock Insuficiente", "La cantidad ingresada es inválida o supera el stock físico disponible en bodega.", "btn-warning", "bi-exclamation-circle-fill", "#ffc107");
+            return;
+        }
+
+        ConfigurarModal("Confirmar Venta",
+                        $"¿Registrar la salida de {cantidadSolicitada} unidad(es) de\n'{item.NombrePrenda}' (Talla: {item.Talla})?",
+                        "btn-primary", "bi-cart-check-fill", "#0d6efd",
+                        async () => await ProcesarVenta(item.IdVariante, cantidadSolicitada));
+    }
+
+    private async Task ProcesarVenta(int idVariante, int cantidad)
     {
         var movimiento = new MovimientoBodegaDTO
         {
             IdVariante = idVariante,
             TipoOperacion = "VENTA_CLIENTE",
-            Cantidad = 1,
+            Cantidad = cantidad,
             Justificacion = "Venta rápida desde catálogo"
         };
 
         var resultado = await InventarioService.RegistrarMovimientoBodegaAsync(movimiento);
         if (resultado.Exito)
         {
-            await BuscarPrendas(); // Refrescar los datos para ver el descuento de stock
+            await BuscarPrendas();
+            MostrarModalInfo("¡Venta Exitosa!", "Los artículos fueron descontados del inventario correctamente.", "btn-success", "bi-check-circle-fill", "#198754");
+        }
+    }
+
+    // --- LÓGICA DE ELIMINACIÓN ---
+    private void PrepararEliminacion(VarianteDTO item)
+    {
+        ConfigurarModal("Eliminar Prenda",
+                        $"Estás a punto de borrar '{item.NombrePrenda}' (Código: {item.CodigoPrenda}).\n\nEsto destruirá permanentemente la prenda, TODAS sus variantes y su historial de movimientos.\n\n¿Deseas continuar?",
+                        "btn-danger", "bi-trash3-fill", "#dc3545",
+                        async () => await ProcesarEliminacion(item.CodigoPrenda));
+    }
+
+    private async Task ProcesarEliminacion(string codigoPrenda)
+    {
+        bool exito = await InventarioService.EliminarPrendaAsync(codigoPrenda);
+        if (exito)
+        {
+            await BuscarPrendas();
+            MostrarModalInfo("Prenda Eliminada", "El producto y sus variantes fueron borrados del sistema de forma permanente.", "btn-success", "bi-check-circle-fill", "#198754");
+        }
+    }
+
+    // --- CONTROLADORES DEL MODAL ---
+    private void ConfigurarModal(string titulo, string mensaje, string claseBoton, string icono, string colorIcono, Func<Task> accion)
+    {
+        modalTitulo = titulo;
+        modalMensaje = mensaje;
+        modalClaseBoton = claseBoton;
+        modalIcono = icono;
+        modalColorIcono = colorIcono;
+        accionPendiente = accion;
+        modalEsInformativo = false;
+        mostrarModal = true;
+    }
+
+    private void MostrarModalInfo(string titulo, string mensaje, string claseBoton, string icono, string colorIcono)
+    {
+        modalTitulo = titulo;
+        modalMensaje = mensaje;
+        modalClaseBoton = claseBoton;
+        modalIcono = icono;
+        modalColorIcono = colorIcono;
+        accionPendiente = null;
+        modalEsInformativo = true;
+        mostrarModal = true;
+    }
+
+    private void CerrarModal()
+    {
+        mostrarModal = false;
+        accionPendiente = null;
+    }
+
+    private async Task EjecutarAccionConfirmada()
+    {
+        if (accionPendiente != null)
+        {
+            await accionPendiente.Invoke();
+        }
+        else
+        {
+            CerrarModal();
         }
     }
 }

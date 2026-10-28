@@ -1,6 +1,6 @@
 ﻿@page "/nueva-prenda"
-@rendermode InteractiveServer
 @attribute [Authorize]
+@rendermode InteractiveServer
 @using BlazorApp1.Models.DTO
 @using BlazorApp1.Data
 @using Microsoft.AspNetCore.Authorization
@@ -8,119 +8,162 @@
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Registrar Nueva Prenda</h2>
+        <h3 class="text-white">Registrar Nueva Prenda</h3>
         <span class="badge bg-danger">Privilegio: Administradora</span>
     </div>
-    <hr />
 
     <EditForm Model="modelo" OnValidSubmit="GuardarPrenda" FormName="formNuevaPrenda">
         <DataAnnotationsValidator />
 
         <div class="row">
+            <!-- 1. Datos Generales -->
             <div class="col-12 col-lg-5 mb-4">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-dark text-white">
+                <div class="card shadow-sm h-100 bg-dark text-white border-secondary">
+                    <div class="card-header bg-secondary text-white border-secondary">
                         <h5 class="mb-0">1. Datos Generales</h5>
                     </div>
                     <div class="card-body">
+
                         <div class="mb-3">
-                            <label class="form-label">Código Identificador</label>
-                            <InputText class="form-control" @bind-Value="modelo.CodigoIdentificador" />
+                            <label class="form-label text-light">Código Identificador</label>
+                            <InputText @bind-Value="modelo.CodigoIdentificador" class="form-control bg-dark text-white border-secondary" />
                         </div>
+
                         <div class="mb-3">
-                            <label class="form-label">Nombre</label>
-                            <InputText class="form-control" @bind-Value="modelo.Nombre" />
+                            <label class="form-label text-light">Marca</label>
+                            <InputText @bind-Value="modelo.Marca" class="form-control bg-dark text-white border-secondary" placeholder="Ej. Levi's, Zara..." />
+                            <small class="text-muted">Marca distintiva de la prenda.</small>
                         </div>
+
                         <div class="mb-3">
-                            <label class="form-label">Categoría</label>
-                            <InputText class="form-control" @bind-Value="modelo.Categoria" />
+                            <label class="form-label text-light">Categoría</label>
+                            <InputText @bind-Value="modelo.Categoria" class="form-control bg-dark text-white border-secondary" />
                         </div>
+
                         <div class="mb-3">
-                            <label class="form-label">Descripción</label>
-                            <InputTextArea class="form-control" @bind-Value="modelo.DescripcionBreve" />
+                            <label class="form-label text-light">Descripción</label>
+                            <InputTextArea @bind-Value="modelo.DescripcionBreve" class="form-control bg-dark text-white border-secondary" rows="3" />
                         </div>
+
                     </div>
                 </div>
             </div>
 
+            <!-- 2. Variantes -->
             <div class="col-12 col-lg-7 mb-4">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                <div class="card shadow-sm h-100 bg-dark text-white border-secondary">
+                    <div class="card-header bg-secondary text-white border-secondary d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">2. Variantes (Tallas y Colores)</h5>
                         <button type="button" class="btn btn-sm btn-light" @onclick="AgregarVariante">
                             + Añadir Variante
                         </button>
                     </div>
                     <div class="card-body">
+
                         @foreach (var variante in modelo.Variantes)
                         {
-                            <div class="row g-2 align-items-end mb-3 border-bottom pb-2">
+                            <div class="row g-2 align-items-end mb-3 border-bottom border-secondary pb-2">
                                 <div class="col-6 col-md-3">
-                                    <label class="form-label fs-7">Talla</label>
-                                    <InputText class="form-control form-control-sm" @bind-Value="variante.Talla" />
+                                    <label class="form-label text-light" style="font-size:0.85rem">Talla</label>
+                                    <InputText @bind-Value="variante.Talla" class="form-control form-control-sm bg-dark text-white border-secondary" />
                                 </div>
                                 <div class="col-6 col-md-3">
-                                    <label class="form-label fs-7">Color</label>
-                                    <InputText class="form-control form-control-sm" @bind-Value="variante.Color" />
+                                    <label class="form-label text-light" style="font-size:0.85rem">Color</label>
+                                    <InputText @bind-Value="variante.Color" class="form-control form-control-sm bg-dark text-white border-secondary" />
                                 </div>
                                 <div class="col-4 col-md-2">
-                                    <label class="form-label fs-7">Stock</label>
-                                    <InputNumber class="form-control form-control-sm" @bind-Value="variante.StockInicial" />
+                                    <label class="form-label text-light" style="font-size:0.85rem">Stock</label>
+                                    <InputNumber @bind-Value="variante.StockInicial" class="form-control form-control-sm bg-dark text-white border-secondary" />
                                 </div>
                                 <div class="col-4 col-md-2">
-                                    <label class="form-label fs-7">Alerta</label>
-                                    <InputNumber class="form-control form-control-sm" @bind-Value="variante.LimiteAlerta" />
+                                    <label class="form-label text-light" style="font-size:0.85rem">Alerta</label>
+                                    <InputNumber @bind-Value="variante.LimiteAlerta" class="form-control form-control-sm bg-dark text-white border-secondary" />
                                 </div>
-                                <div class="col-4 col-md-2">
-                                    @if (modelo.Variantes.Count > 1)
-                                    {
-                                        <button type="button" class="btn btn-outline-danger btn-sm w-100" @onclick="() => RemoverVariante(variante)">
-                                            X Quitar
-                                        </button>
-                                    }
+                                <div class="col-4 col-md-2 text-end">
+                                    <button type="button" class="btn btn-outline-danger btn-sm w-100" @onclick="() => RemoverVariante(variante)" disabled="@(modelo.Variantes.Count == 1)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                 </div>
                             </div>
                         }
+
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-12">
-                @if (!string.IsNullOrEmpty(mensajeEstado))
-                {
-                    <div class="alert @claseAlerta text-center">@mensajeEstado</div>
-                }
-                <button type="submit" class="btn btn-success w-100 py-2 mb-5" disabled="@cargando">
-                    @(cargando ? "Guardando..." : "Guardar Prenda y Variantes")
-                </button>
-            </div>
-        </div>
+        <button type="submit" class="btn btn-success w-100 py-2 fw-bold text-white shadow-sm mb-5">
+            Guardar Prenda y Variantes
+        </button>
     </EditForm>
 </div>
 
-@code {
+<!-- MODAL INTEGRADO DEL SISTEMA -->
+@if (mostrarModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.65); backdrop-filter: blur(6px);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-white border-0 shadow-lg" style="border-radius: 1.25rem;">
 
+                <div class="modal-header border-0 d-flex flex-column align-items-center pt-4 pb-0">
+                    <i class="bi @modalIcono mb-2" style="font-size: 4rem; color: @modalColorIcono;"></i>
+                    <h4 class="modal-title fw-bold text-center w-100">@modalTitulo</h4>
+                </div>
+
+                <div class="modal-body text-center px-4 py-3 text-light" style="white-space: pre-line; font-size: 1.05rem;">
+                    @modalMensaje
+                </div>
+
+                <div class="modal-footer border-0 justify-content-center pb-4 pt-2">
+                    @if (!modalEsInformativo)
+                    {
+                        <button type="button" class="btn btn-outline-light px-4 rounded-pill fw-bold mx-2" @onclick="CerrarModal">Cancelar</button>
+                    }
+                    <button type="button" class="btn @modalClaseBoton px-5 rounded-pill fw-bold shadow mx-2" @onclick="EjecutarAccionConfirmada">Aceptar</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+
+@code {
     [SupplyParameterFromForm]
-    private NuevaPrendaDTO modelo { get; set; } = new();
-    private bool cargando = false;
-    private string? mensajeEstado;
-    private string claseAlerta = "alert-info";
+    public NuevaPrendaDTO modelo { get; set; } = new();
+
+    // Variables de estado para el Modal Dinámico Vistoso
+    private bool mostrarModal = false;
+    private string modalTitulo = "";
+    private string modalMensaje = "";
+    private string modalClaseBoton = "btn-primary";
+    private string modalIcono = "bi-info-circle";
+    private string modalColorIcono = "#0dcaf0";
+    private bool modalEsInformativo = false;
+    private Func<Task>? accionPendiente;
 
     protected override void OnInitialized()
     {
-        AgregarVariante();
+        if (modelo.Variantes == null || !modelo.Variantes.Any())
+        {
+            modelo.Variantes = new List<NuevaVarianteDTO>
+            {
+                new NuevaVarianteDTO { LimiteAlerta = 10, StockInicial = 0 }
+            };
+        }
     }
 
     private void AgregarVariante()
     {
-        // 1. Verificamos y creamos la lista si es nula
-        if (modelo.Variantes == null)
+        if (modelo.Variantes.Any())
         {
-            modelo.Variantes = new List<NuevaVarianteDTO>();
+            var ultimaVariante = modelo.Variantes.Last();
+            if (string.IsNullOrWhiteSpace(ultimaVariante.Talla) || string.IsNullOrWhiteSpace(ultimaVariante.Color))
+            {
+                MostrarModalInfo("Campos Incompletos", "Completa la Talla y el Color de la variante actual antes de añadir una nueva.", "btn-warning", "bi-exclamation-triangle-fill", "#ffc107");
+                return;
+            }
         }
-        // 2. Agregamos el nuevo elemento de forma segura
+
         modelo.Variantes.Add(new NuevaVarianteDTO { LimiteAlerta = 10, StockInicial = 0 });
     }
 
@@ -134,28 +177,70 @@
 
     private async Task GuardarPrenda()
     {
-        cargando = true;
-        mensajeEstado = null;
+        if (string.IsNullOrWhiteSpace(modelo.Marca))
+        {
+            MostrarModalInfo("Datos Generales Incompletos", "Debes ingresar la Marca de la prenda antes de continuar.", "btn-warning", "bi-exclamation-triangle-fill", "#ffc107");
+            return;
+        }
+
+        if (modelo.Variantes == null || !modelo.Variantes.Any())
+        {
+            MostrarModalInfo("Faltan Variantes", "Debes agregar al menos una variante (Talla y Color) para poder registrar el producto.", "btn-warning", "bi-exclamation-triangle-fill", "#ffc107");
+            return;
+        }
+
+        if (modelo.Variantes.Any(v => string.IsNullOrWhiteSpace(v.Talla) || string.IsNullOrWhiteSpace(v.Color)))
+        {
+            MostrarModalInfo("Campos Incompletos", "Tienes filas de variantes incompletas. Por favor, llénalas o elimínalas antes de guardar.", "btn-warning", "bi-exclamation-triangle-fill", "#ffc107");
+            return;
+        }
 
         var resultado = await InventarioService.RegistrarNuevaPrendaAsync(modelo);
 
         if (resultado.Exito)
         {
-            MostrarMensaje($"Prenda registrada exitosamente.", "alert-success");
-            modelo = new NuevaPrendaDTO(); 
-            AgregarVariante(); 
+            MostrarModalInfo("¡Registro Exitoso!", $"La marca '{modelo.Marca}' y sus variantes fueron guardadas en la base de datos.", "btn-success", "bi-check-circle-fill", "#198754");
+
+            // Reiniciar el formulario
+            modelo = new NuevaPrendaDTO
+            {
+                Variantes = new List<NuevaVarianteDTO> { new NuevaVarianteDTO { LimiteAlerta = 10, StockInicial = 0 } }
+            };
         }
         else
         {
-            MostrarMensaje(resultado.MensajeError ?? "Error desconocido.", "alert-danger");
+            MostrarModalInfo("Error al Guardar", resultado.MensajeError ?? "Ocurrió un error inesperado.", "btn-danger", "bi-x-circle-fill", "#dc3545");
         }
-
-        cargando = false;
     }
 
-    private void MostrarMensaje(string mensaje, string clase)
+    // --- CONTROLADORES DEL MODAL ---
+    private void MostrarModalInfo(string titulo, string mensaje, string claseBoton, string icono, string colorIcono)
     {
-        mensajeEstado = mensaje;
-        claseAlerta = clase;
+        modalTitulo = titulo;
+        modalMensaje = mensaje;
+        modalClaseBoton = claseBoton;
+        modalIcono = icono;
+        modalColorIcono = colorIcono;
+        accionPendiente = null;
+        modalEsInformativo = true;
+        mostrarModal = true;
+    }
+
+    private void CerrarModal()
+    {
+        mostrarModal = false;
+        accionPendiente = null;
+    }
+
+    private async Task EjecutarAccionConfirmada()
+    {
+        if (accionPendiente != null)
+        {
+            await accionPendiente.Invoke();
+        }
+        else
+        {
+            CerrarModal();
+        }
     }
 }

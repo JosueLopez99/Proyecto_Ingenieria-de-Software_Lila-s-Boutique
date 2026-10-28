@@ -7,7 +7,7 @@ namespace BlazorApp1.Models
         [Key, MaxLength(50)]
         public string CodigoIdentificador { get; set; } = null!;
         [Required, MaxLength(100)]
-        public string Nombre { get; set; } = null!;
+        public string Marca { get; set; } = null!;
         [MaxLength(255)]
         public string? DescripcionBreve { get; set; }
         [Required, MaxLength(50)]

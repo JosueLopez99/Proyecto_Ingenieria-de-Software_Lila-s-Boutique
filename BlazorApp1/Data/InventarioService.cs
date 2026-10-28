@@ -10,6 +10,7 @@ namespace BlazorApp1.Data
         Task<List<VarianteDTO>> ObtenerAlertasStockAsync();
         Task<OperacionResultadoDTO> RegistrarMovimientoBodegaAsync(MovimientoBodegaDTO movimiento);
         Task<OperacionResultadoDTO> RegistrarNuevaPrendaAsync(NuevaPrendaDTO nuevaPrendaDto);
+        Task<bool> EliminarPrendaAsync(string codigoIdentificador);
     }
 
     public class InventarioService : InterInventarioService
@@ -28,7 +29,7 @@ namespace BlazorApp1.Data
             if (!string.IsNullOrWhiteSpace(terminoBusqueda))
             {
                 terminoBusqueda = terminoBusqueda.ToLower();
-                query = query.Where(v => v.Prenda.Nombre.ToLower().Contains(terminoBusqueda) ||
+                query = query.Where(v => v.Prenda.Marca.ToLower().Contains(terminoBusqueda) ||
                                          v.CodigoPrenda.ToLower().Contains(terminoBusqueda));
             }
 
@@ -36,7 +37,7 @@ namespace BlazorApp1.Data
             {
                 IdVariante = v.IdVariante,
                 CodigoPrenda = v.CodigoPrenda,
-                NombrePrenda = v.Prenda.Nombre,
+                NombrePrenda = v.Prenda.Marca,
                 Talla = v.Talla,
                 Color = v.Color,
                 StockFisicoActual = v.StockFisicoActual,
@@ -53,7 +54,7 @@ namespace BlazorApp1.Data
                 {
                     IdVariante = v.IdVariante,
                     CodigoPrenda = v.CodigoPrenda,
-                    NombrePrenda = v.Prenda.Nombre,
+                    NombrePrenda = v.Prenda.Marca,
                     Talla = v.Talla,
                     Color = v.Color,
                     StockFisicoActual = v.StockFisicoActual,
@@ -74,7 +75,7 @@ namespace BlazorApp1.Data
             var nuevaPrenda = new Prenda
             {
                 CodigoIdentificador = dto.CodigoIdentificador,
-                Nombre = dto.Nombre,
+                Marca = dto.Marca,
                 DescripcionBreve = dto.DescripcionBreve,
                 Categoria = dto.Categoria,
                 Variantes = new List<VariantePrenda>() // Iniciar la colección
@@ -138,6 +139,20 @@ namespace BlazorApp1.Data
             await _context.SaveChangesAsync();
 
             return new OperacionResultadoDTO { Exito = true };
+        }
+
+        public async Task<bool> EliminarPrendaAsync(string codigoIdentificador)
+        {
+            var prenda = await _context.Prendas.FindAsync(codigoIdentificador);
+
+            if (prenda != null)
+            {
+                _context.Prendas.Remove(prenda);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+
+            return false;
         }
     }
 }

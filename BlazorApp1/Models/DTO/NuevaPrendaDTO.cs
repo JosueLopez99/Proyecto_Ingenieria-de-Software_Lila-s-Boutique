@@ -6,7 +6,7 @@ public class NuevaPrendaDTO
     public string CodigoIdentificador { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "El nombre es obligatorio.")]
-    public string Nombre { get; set; } = string.Empty;
+    public string Marca { get; set; } = string.Empty;
 
     public string? DescripcionBreve { get; set; }
 

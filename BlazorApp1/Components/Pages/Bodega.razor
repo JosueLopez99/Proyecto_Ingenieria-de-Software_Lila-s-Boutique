@@ -1,0 +1,122 @@
+﻿@page "/bodega"
+@attribute [Authorize]
+@using BlazorApp1.Models
+@using BlazorApp1.Data
+@using BlazorApp1.Models.DTO
+@using Microsoft.AspNetCore.Authorization
+@inject InterInventarioService InventarioService
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Gestión de Bodega</h2>
+        <span class="badge bg-secondary">Perfil: Bodeguero</span>
+    </div>
+    <hr />
+
+    <div class="row">
+        <div class="col-12 col-lg-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Registrar Movimiento Físico</h5>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="movimientoModel" OnValidSubmit="ProcesarMovimiento" FormName="formBodega">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Prenda y Variante (SKU)</label>
+                            <select class="form-select" @bind="movimientoModel.IdVariante">
+                                <option value="0">-- Seleccione una variante --</option>
+                                @if (variantesDisponibles != null)
+                                {
+                                    @foreach (var variante in variantesDisponibles)
+                                    {
+                                        <option value="@variante.IdVariante">
+                                            @variante.CodigoPrenda - @variante.NombrePrenda (@variante.Talla / @variante.Color) | Stock: @variante.StockFisicoActual
+                                        </option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Tipo de Operación</label>
+                            <select class="form-select" @bind="movimientoModel.TipoOperacion">
+                                <option value="">-- Seleccione el tipo --</option>
+                                <option value="RECEPCION_PROVEEDOR">Entrada (Recepción de Proveedor)</option>
+                                <option value="MERMA_DAÑO">Salida (Baja por Daño/Merma)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Cantidad</label>
+                            <InputNumber class="form-control" @bind-Value="movimientoModel.Cantidad" min="1" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Justificación</label>
+                            <InputTextArea class="form-control" @bind-Value="movimientoModel.Justificacion" rows="2" />
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(mensajeEstado))
+                        {
+                            <div class="alert @claseAlerta text-center">@mensajeEstado</div>
+                        }
+
+                        <button type="submit" class="btn btn-primary w-100" disabled="@cargando">
+                            @(cargando ? "Procesando..." : "Confirmar Movimiento")
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [SupplyParameterFromForm]
+    public MovimientoBodegaDTO movimientoModel { get; set; } = new();
+    private List<VarianteDTO>? variantesDisponibles;
+    private bool cargando = false;
+    private string? mensajeEstado;
+    private string claseAlerta = "alert-info";
+
+    protected override async Task OnInitializedAsync()
+    {
+        variantesDisponibles = await InventarioService.ObtenerVariantesAsync("");
+    }
+
+    private async Task ProcesarMovimiento()
+    {
+        cargando = true;
+        mensajeEstado = null;
+
+        if (movimientoModel.IdVariante == 0 || string.IsNullOrEmpty(movimientoModel.TipoOperacion) || movimientoModel.Cantidad <= 0)
+        {
+            MostrarMensaje("Complete todos los campos obligatorios.", "alert-warning");
+            cargando = false;
+            return;
+        }
+
+        var resultado = await InventarioService.RegistrarMovimientoBodegaAsync(movimientoModel);
+
+        if (resultado.Exito)
+        {
+            MostrarMensaje($"Movimiento registrado exitosamente.", "alert-success");
+            movimientoModel = new();
+            variantesDisponibles = await InventarioService.ObtenerVariantesAsync("");
+        }
+        else
+        {
+            MostrarMensaje(resultado.MensajeError ?? "Error de validación", "alert-danger");
+        }
+        cargando = false;
+    }
+
+    private void MostrarMensaje(string mensaje, string clase)
+    {
+        mensajeEstado = mensaje;
+        claseAlerta = clase;
+    }
+}

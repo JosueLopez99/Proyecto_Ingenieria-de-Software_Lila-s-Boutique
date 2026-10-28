@@ -1,6 +1,20 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
+﻿@using Microsoft.AspNetCore.Components.Authorization
+
+<Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+            <NotAuthorized>
+                <div class="alert alert-danger m-4 text-center">
+                    <h4>No autorizado</h4>
+                    <p>Debe iniciar sesión para acceder a este módulo.</p>
+                    <a href="/" class="btn btn-primary">Ir al Login</a>
+                </div>
+            </NotAuthorized>
+        </AuthorizeRouteView>
     </Found>
+    <NotFound>
+        <LayoutView Layout="typeof(Layout.EmptyLayout)">
+            <p>Página no encontrada.</p>
+        </LayoutView>
+    </NotFound>
 </Router>

@@ -1,0 +1,89 @@
+﻿@page "/catalogo"
+@attribute [Authorize]
+@using BlazorApp1.Models
+@using BlazorApp1.Data
+@using BlazorApp1.Models.DTO
+@using Microsoft.AspNetCore.Authorization
+@inject InterInventarioService InventarioService
+
+<div class="container mt-4">
+    <h3>Catálogo de Prendas</h3>
+
+    <div class="row mb-4">
+        <div class="col-12 col-md-8 mb-2">
+            <input type="text" class="form-control" placeholder="Buscar por nombre o código..." @bind="terminoBusqueda" @onkeyup="BuscarPrendas" />
+        </div>
+        <div class="col-12 col-md-4">
+            <button class="btn btn-secondary w-100" @onclick="BuscarPrendas">Buscar</button>
+        </div>
+    </div>
+
+    <div class="row">
+        @if (variantes == null)
+        {
+            <p>Cargando inventario...</p>
+        }
+        else if (!variantes.Any())
+        {
+            <p>No se encontraron coincidencias.</p>
+        }
+        else
+        {
+            @foreach (var item in variantes)
+            {
+                <div class="col-12 col-md-4 col-lg-3 mb-3">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">@item.NombrePrenda</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">@item.CodigoPrenda</h6>
+                            <p class="card-text">
+                                <strong>Talla:</strong> @item.Talla <br />
+                                <strong>Color:</strong> @item.Color <br />
+                                <span class="badge @(item.StockFisicoActual > 0 ? "bg-success" : "bg-danger")">
+                                    Stock: @item.StockFisicoActual
+                                </span>
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <button class="btn btn-outline-primary btn-sm w-100" disabled="@(item.StockFisicoActual <= 0)" @onclick="() => RegistrarVentaRapida(item.IdVariante)">
+                                Registrar Venta
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private string terminoBusqueda = "";
+    private List<VarianteDTO>? variantes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await BuscarPrendas();
+    }
+
+    private async Task BuscarPrendas()
+    {
+        variantes = await InventarioService.ObtenerVariantesAsync(terminoBusqueda);
+    }
+
+    private async Task RegistrarVentaRapida(int idVariante)
+    {
+        var movimiento = new MovimientoBodegaDTO
+        {
+            IdVariante = idVariante,
+            TipoOperacion = "VENTA_CLIENTE",
+            Cantidad = 1,
+            Justificacion = "Venta rápida desde catálogo"
+        };
+
+        var resultado = await InventarioService.RegistrarMovimientoBodegaAsync(movimiento);
+        if (resultado.Exito)
+        {
+            await BuscarPrendas(); // Refrescar los datos para ver el descuento de stock
+        }
+    }
+}

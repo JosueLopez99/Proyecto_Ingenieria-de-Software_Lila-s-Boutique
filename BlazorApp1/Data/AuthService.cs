@@ -1,16 +1,15 @@
 ﻿using BlazorApp1.Models.DTO;
-using BlazorApp1.Models;
 using Microsoft.EntityFrameworkCore;
-using BlazorApp1.Data;
+// using BCrypt.Net; (Puedes agregarlo arriba o usar la ruta completa como en el código)
 
-namespace LilasBoutique.Data
+namespace BlazorApp1.Data
 {
-    public interface IAuthService
+    public interface InterAuthService
     {
         Task<string?> LoginAsync(LoginDTO loginDto);
     }
 
-    public class AuthService : IAuthService
+    public class AuthService : InterAuthService
     {
         private readonly LilaBoutiqueContext _context;
 
@@ -25,13 +24,13 @@ namespace LilasBoutique.Data
 
             if (usuario == null) return null;
 
-            // En un entorno real, usar BCrypt.Net.BCrypt.Verify(loginDto.Password, usuario.HashCredencial)
-            // Simulación para el prototipo:
-            bool hashValido = (loginDto.Password == "waltertienesida");
+            // Implementación real del algoritmo Hash (Cumplimiento Ley 787)
+            // Compara la contraseña que digitó el usuario con el Hash encriptado de la base de datos
+            bool hashValido = BCrypt.Net.BCrypt.Verify(loginDto.Password, usuario.HashCredencial);
 
             if (hashValido)
             {
-                return "TokenGeneradoAleatorioXYZ123"; // Simulación de token JWT
+                return "TokenGeneradoAleatorioXYZ123"; // Simulación de token JWT que ya tenías
             }
 
             return null;

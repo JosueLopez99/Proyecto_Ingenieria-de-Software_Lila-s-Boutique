@@ -1,0 +1,85 @@
+﻿@page "/"
+@layout Layout.EmptyLayout
+@inject BlazorApp1.Data.InterAuthService AuthService
+@using BlazorApp1.Models.DTO
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authentication
+@inject NavigationManager NavManager
+
+
+<div class="container d-flex justify-content-center align-items-center vh-100">
+    <div class="card shadow-lg p-4" style="width: 100%; max-width: 400px;">
+        <div class="text-center mb-4">
+            <h2 class="text-primary">Lila's Boutique</h2>
+            <p class="text-muted">Inicio de Sesión Segura</p>
+        </div>
+
+        <EditForm Model="loginModel" OnValidSubmit="ProcesarLogin" FormName="loginForm">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label class="form-label">Correo Electrónico</label>
+                <InputText class="form-control" @bind-Value="loginModel.Correo" placeholder="usuario@lilasboutique.com" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Contraseña</label>
+                <InputText type="password" class="form-control" @bind-Value="loginModel.Password" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(mensajeError))
+            {
+                <div class="alert alert-danger text-center">@mensajeError</div>
+            }
+
+            <button type="submit" class="btn btn-primary w-100" disabled="@cargando">
+                @(cargando ? "Validando..." : "Ingresar")
+            </button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    public LoginDTO loginModel { get; set; } = new();
+
+    // Capturamos el contexto HTTP real para poder escribir la Cookie
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    private bool cargando = false;
+    private string? mensajeError;
+
+    private async Task ProcesarLogin()
+    {
+        cargando = true;
+        mensajeError = null;
+
+        // Validamos contra la base de datos (BCrypt)
+        string? token = await AuthService.LoginAsync(loginModel);
+
+        if (!string.IsNullOrEmpty(token) && HttpContext != null)
+        {
+            // 1. Construimos la identidad segura del usuario
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, loginModel.Correo)
+            };
+
+            var identity = new ClaimsIdentity(claims, "Cookies");
+            var principal = new ClaimsPrincipal(identity);
+
+            // 2. Escribimos la Cookie física y encriptada en el navegador
+            await HttpContext.SignInAsync("Cookies", principal);
+
+            // 3. Redirigimos forzando la recarga (true) para que el navegador aplique la nueva Cookie
+            NavManager.NavigateTo("/dashboard", forceLoad: true);
+        }
+        else
+        {
+            mensajeError = "Credenciales incorrectas.";
+        }
+
+        cargando = false;
+    }
+}

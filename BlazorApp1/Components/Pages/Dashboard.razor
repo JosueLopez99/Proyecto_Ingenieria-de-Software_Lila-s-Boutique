@@ -1,0 +1,48 @@
+﻿@page "/dashboard"
+@attribute [Authorize]
+@using BlazorApp1.Models
+@using BlazorApp1.Data
+@using BlazorApp1.Models.DTO
+@using Microsoft.AspNetCore.Authorization
+@inject InterInventarioService InventarioService
+
+<div class="container mt-4">
+    <h2>Panel Administrativo</h2>
+    <hr />
+
+    <div class="row">
+        @if (alertasStock != null && alertasStock.Any())
+        {
+            <div class="col-12 mb-4">
+                <div class="alert alert-warning border-warning shadow-sm" role="alert">
+                    <h4 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> ¡Atención! Desabastecimiento</h4>
+                    <p>Las siguientes variantes han alcanzado o superado su límite de alerta crítico:</p>
+                    <hr>
+                    <ul class="mb-0">
+                        @foreach (var alerta in alertasStock)
+                        {
+                            <li>
+                                <strong>@alerta.NombrePrenda</strong> (Talla: @alerta.Talla, Color: @alerta.Color)
+                                - Stock actual: <span class="text-danger fw-bold">@alerta.StockFisicoActual</span>
+                                <em>(Límite configurado: @alerta.LimiteAlerta)</em>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+        else if (alertasStock != null && !alertasStock.Any())
+        {
+            <div class="alert alert-success">Todos los niveles de inventario son óptimos.</div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<VarianteDTO>? alertasStock;
+
+    protected override async Task OnInitializedAsync()
+    {
+        alertasStock = await InventarioService.ObtenerAlertasStockAsync();
+    }
+}

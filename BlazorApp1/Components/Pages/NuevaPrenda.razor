@@ -1,0 +1,161 @@
+﻿@page "/nueva-prenda"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using BlazorApp1.Models.DTO
+@using BlazorApp1.Data
+@using Microsoft.AspNetCore.Authorization
+@inject InterInventarioService InventarioService
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Registrar Nueva Prenda</h2>
+        <span class="badge bg-danger">Privilegio: Administradora</span>
+    </div>
+    <hr />
+
+    <EditForm Model="modelo" OnValidSubmit="GuardarPrenda" FormName="formNuevaPrenda">
+        <DataAnnotationsValidator />
+
+        <div class="row">
+            <div class="col-12 col-lg-5 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">1. Datos Generales</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Código Identificador</label>
+                            <InputText class="form-control" @bind-Value="modelo.CodigoIdentificador" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre</label>
+                            <InputText class="form-control" @bind-Value="modelo.Nombre" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Categoría</label>
+                            <InputText class="form-control" @bind-Value="modelo.Categoria" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <InputTextArea class="form-control" @bind-Value="modelo.DescripcionBreve" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-7 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">2. Variantes (Tallas y Colores)</h5>
+                        <button type="button" class="btn btn-sm btn-light" @onclick="AgregarVariante">
+                            + Añadir Variante
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var variante in modelo.Variantes)
+                        {
+                            <div class="row g-2 align-items-end mb-3 border-bottom pb-2">
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label fs-7">Talla</label>
+                                    <InputText class="form-control form-control-sm" @bind-Value="variante.Talla" />
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label fs-7">Color</label>
+                                    <InputText class="form-control form-control-sm" @bind-Value="variante.Color" />
+                                </div>
+                                <div class="col-4 col-md-2">
+                                    <label class="form-label fs-7">Stock</label>
+                                    <InputNumber class="form-control form-control-sm" @bind-Value="variante.StockInicial" />
+                                </div>
+                                <div class="col-4 col-md-2">
+                                    <label class="form-label fs-7">Alerta</label>
+                                    <InputNumber class="form-control form-control-sm" @bind-Value="variante.LimiteAlerta" />
+                                </div>
+                                <div class="col-4 col-md-2">
+                                    @if (modelo.Variantes.Count > 1)
+                                    {
+                                        <button type="button" class="btn btn-outline-danger btn-sm w-100" @onclick="() => RemoverVariante(variante)">
+                                            X Quitar
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                @if (!string.IsNullOrEmpty(mensajeEstado))
+                {
+                    <div class="alert @claseAlerta text-center">@mensajeEstado</div>
+                }
+                <button type="submit" class="btn btn-success w-100 py-2 mb-5" disabled="@cargando">
+                    @(cargando ? "Guardando..." : "Guardar Prenda y Variantes")
+                </button>
+            </div>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+
+    [SupplyParameterFromForm]
+    private NuevaPrendaDTO modelo { get; set; } = new();
+    private bool cargando = false;
+    private string? mensajeEstado;
+    private string claseAlerta = "alert-info";
+
+    protected override void OnInitialized()
+    {
+        AgregarVariante();
+    }
+
+    private void AgregarVariante()
+    {
+        // 1. Verificamos y creamos la lista si es nula
+        if (modelo.Variantes == null)
+        {
+            modelo.Variantes = new List<NuevaVarianteDTO>();
+        }
+        // 2. Agregamos el nuevo elemento de forma segura
+        modelo.Variantes.Add(new NuevaVarianteDTO { LimiteAlerta = 10, StockInicial = 0 });
+    }
+
+    private void RemoverVariante(NuevaVarianteDTO variante)
+    {
+        if (modelo.Variantes.Count > 1)
+        {
+            modelo.Variantes.Remove(variante);
+        }
+    }
+
+    private async Task GuardarPrenda()
+    {
+        cargando = true;
+        mensajeEstado = null;
+
+        var resultado = await InventarioService.RegistrarNuevaPrendaAsync(modelo);
+
+        if (resultado.Exito)
+        {
+            MostrarMensaje($"Prenda registrada exitosamente.", "alert-success");
+            modelo = new NuevaPrendaDTO(); 
+            AgregarVariante(); 
+        }
+        else
+        {
+            MostrarMensaje(resultado.MensajeError ?? "Error desconocido.", "alert-danger");
+        }
+
+        cargando = false;
+    }
+
+    private void MostrarMensaje(string mensaje, string clase)
+    {
+        mensajeEstado = mensaje;
+        claseAlerta = clase;
+    }
+}

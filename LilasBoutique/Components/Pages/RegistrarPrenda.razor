@@ -1,0 +1,280 @@
+﻿@page "/registrar-prenda"
+@attribute [Authorize(Roles = "Administrador")]
+@rendermode InteractiveServer
+@using LilasBoutique.Models
+@using LilasBoutique.Data
+@inject IInventarioService InventarioService
+
+<h3 class="fw-bold mb-4">Registro de Nueva Prenda</h3>
+
+@if (!string.IsNullOrEmpty(mensajeNotificacion))
+{
+    <div class="alert @(esError ? "alert-danger" : "alert-success") alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi @(esError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill") me-2"></i>
+        @mensajeNotificacion
+        <button type="button" class="btn-close" @onclick="() => mensajeNotificacion = string.Empty"></button>
+    </div>
+}
+
+<div class="row g-4">
+    <!-- Panel Ficha Maestra -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="fw-bold text-primary mb-4"><i class="bi bi-tag-fill me-2"></i>Ficha Maestra</h5>
+
+                <div class="mb-3">
+                    <label class="form-label small">Código Identificador <span class="text-danger">*</span></label>
+                    <InputText @bind-Value="nuevaPrenda.CodigoIdentificador" class="form-control" placeholder="Ej: CAM-001" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small">Marca <span class="text-danger">*</span></label>
+                    <InputText @bind-Value="nuevaPrenda.Marca" class="form-control" placeholder="Ej: Levi's" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small">Categoría <span class="text-danger">*</span></label>
+                    <select class="form-select" value="@nuevaPrenda.CategoriaId" @onchange="OnCategoriaChanged">
+                        <option value="0">Seleccione categoría...</option>
+                        @foreach (var cat in categorias)
+                        {
+                            <option value="@cat.IdCategoria">@cat.NombreCategoria</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small">Descripción Breve</label>
+                    <InputTextArea @bind-Value="nuevaPrenda.DescripcionBreve" class="form-control" rows="3" placeholder="Detalles de la prenda..." />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Variantes -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="fw-bold text-primary mb-4"><i class="bi bi-layers-fill me-2"></i>Variantes (Tallas, Colores y Stock)</h5>
+
+                <!-- Formulario de ingreso de variante -->
+                <div class="row g-2 mb-3 bg-light p-3 rounded border">
+                    <div class="col-md-4">
+                        <label class="form-label small">Talla <span class="text-danger">*</span></label>
+                        <InputSelect @bind-Value="varianteActual.TallaId" class="form-select">
+                            <option value="0">Seleccione...</option>
+                            @foreach (var talla in tallasDisponibles)
+                            {
+                                <option value="@talla.IdTalla">@talla.NombreTalla</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">Color <span class="text-danger">*</span></label>
+                        <InputSelect @bind-Value="varianteActual.ColorId" class="form-select">
+                            <option value="0">Seleccione...</option>
+                            @foreach (var color in colores)
+                            {
+                                <option value="@color.IdColor">@color.NombreColor</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">Precio (C$) <span class="text-danger">*</span></label>
+                        <InputNumber @bind-Value="precioTemporal" class="form-control" min="0" />
+                    </div>
+                    <div class="col-md-6 mt-2">
+                        <label class="form-label small fw-semibold text-success">Stock Inicial (Unidades)</label>
+                        <InputNumber @bind-Value="varianteActual.StockFisicoActual" class="form-control border-success" min="0" />
+                    </div>
+                    <div class="col-md-6 mt-2">
+                        <label class="form-label small fw-semibold text-warning">Alerta Desabastecimiento</label>
+                        <InputNumber @bind-Value="varianteActual.LimiteAlerta" class="form-control border-warning" min="0" />
+                    </div>
+                    <div class="col-12 mt-3">
+                        <button class="btn btn-outline-primary w-100" @onclick="AgregarVariante">
+                            <i class="bi bi-plus-lg me-1"></i> Añadir a la Lista
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabla de variantes agregadas -->
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm align-middle text-center small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Talla</th>
+                                <th>Color</th>
+                                <th>Precio</th>
+                                <th>Stock</th>
+                                <th>Alerta</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!variantesAgregadas.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-muted py-3">Aún no hay variantes agregadas.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var v in variantesAgregadas)
+                                {
+                                    var nombreTalla = tallasDisponibles.FirstOrDefault(t => t.IdTalla == v.TallaId)?.NombreTalla;
+                                    var nombreColor = colores.FirstOrDefault(c => c.IdColor == v.ColorId)?.NombreColor;
+                                    <tr>
+                                        <td class="fw-bold">@nombreTalla</td>
+                                        <td>@nombreColor</td>
+                                        <td>C$ @v.Precio</td>
+                                        <td class="text-success fw-bold">@v.StockFisicoActual</td>
+                                        <td class="text-warning fw-bold">@v.LimiteAlerta</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger border-0" @onclick="() => RemoverVariante(v)">
+                                                <i class="bi bi-x-circle-fill"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <button class="btn btn-success fw-bold px-4" @onclick="GuardarPrenda">
+                        <i class="bi bi-save2-fill me-2"></i>Guardar Prenda Completa
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string mensajeNotificacion = "";
+    private bool esError = false;
+
+    private Prenda nuevaPrenda = new();
+    private VariantePrenda varianteActual = new() { LimiteAlerta = 5, StockFisicoActual = 0 }; // Valores por defecto recomendados
+    private decimal precioTemporal = 0; // Propiedad temporal para manejar el input numérico
+    private List<VariantePrenda> variantesAgregadas = new();
+
+    private List<Categoria> categorias = new();
+    private List<Talla> todasLasTallas = new();
+    private List<Talla> tallasDisponibles = new();
+    private List<Color> colores = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            categorias = await InventarioService.ObtenerCategorias();
+            todasLasTallas = await InventarioService.ObtenerTallas();
+            colores = await InventarioService.ObtenerColores();
+        }
+        catch (Exception ex)
+        {
+            MostrarMensaje($"Error al cargar catálogos: {ex.Message}", true);
+        }
+    }
+
+    private void OnCategoriaChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int catId))
+        {
+            nuevaPrenda.CategoriaId = catId;
+            tallasDisponibles = todasLasTallas.Where(t => t.CategoriaId == catId).ToList();
+            varianteActual.TallaId = 0;
+        }
+        else
+        {
+            tallasDisponibles.Clear();
+            nuevaPrenda.CategoriaId = 0;
+        }
+    }
+
+    private void AgregarVariante()
+    {
+        // Validación de variante
+        if (varianteActual.TallaId == 0 || varianteActual.ColorId == 0)
+        {
+            MostrarMensaje("Debe seleccionar una Talla y un Color para la variante.", true);
+            return;
+        }
+        if (precioTemporal <= 0)
+        {
+            MostrarMensaje("El precio de venta debe ser mayor a cero.", true);
+            return;
+        }
+        if (varianteActual.StockFisicoActual < 0 || varianteActual.LimiteAlerta < 0)
+        {
+            MostrarMensaje("El stock inicial y el límite de alerta no pueden ser negativos.", true);
+            return;
+        }
+
+        // Evitar duplicados exactos en la lista visual
+        if (variantesAgregadas.Any(v => v.TallaId == varianteActual.TallaId && v.ColorId == varianteActual.ColorId))
+        {
+            MostrarMensaje("Esta combinación de Talla y Color ya fue agregada a la lista.", true);
+            return;
+        }
+
+        varianteActual.Precio = precioTemporal;
+        variantesAgregadas.Add(varianteActual);
+
+        // Resetear la variante para el siguiente ingreso (manteniendo valores comunes como precio y stock para agilizar el ingreso)
+        varianteActual = new VariantePrenda
+        {
+            LimiteAlerta = varianteActual.LimiteAlerta,
+            StockFisicoActual = 0
+        };
+        precioTemporal = 0;
+        MostrarMensaje("", false); // Limpiar mensajes
+    }
+
+    private void RemoverVariante(VariantePrenda variante)
+    {
+        variantesAgregadas.Remove(variante);
+    }
+
+    private async Task GuardarPrenda()
+    {
+        // Validaciones de la Ficha Maestra
+        if (string.IsNullOrWhiteSpace(nuevaPrenda.CodigoIdentificador) || string.IsNullOrWhiteSpace(nuevaPrenda.Marca) || nuevaPrenda.CategoriaId == 0)
+        {
+            MostrarMensaje("Complete los campos obligatorios de la Ficha Maestra (Código, Marca y Categoría).", true);
+            return;
+        }
+
+        if (!variantesAgregadas.Any())
+        {
+            MostrarMensaje("Debe agregar al menos una variante (Talla/Color) antes de guardar la prenda.", true);
+            return;
+        }
+
+        try
+        {
+            await InventarioService.GuardarPrendaCompleta(nuevaPrenda, variantesAgregadas);
+
+            // Limpiar formulario tras éxito
+            nuevaPrenda = new Prenda();
+            variantesAgregadas.Clear();
+            tallasDisponibles.Clear(); // Limpia el combobox de tallas
+
+            MostrarMensaje("¡La prenda y sus variantes fueron guardadas exitosamente en el sistema!", false);
+        }
+        catch (Exception ex)
+        {
+            MostrarMensaje($"Ocurrió un error al guardar en la base de datos: {ex.Message}", true);
+        }
+    }
+
+    private void MostrarMensaje(string mensaje, bool error)
+    {
+        mensajeNotificacion = mensaje;
+        esError = error;
+    }
+}

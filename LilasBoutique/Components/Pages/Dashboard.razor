@@ -1,0 +1,64 @@
+﻿@page "/dashboard"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using LilasBoutique.Data
+@using LilasBoutique.Models
+@using Microsoft.AspNetCore.Authorization
+@inject IDashboardService DashboardService
+
+<h3 class="fw-bold mb-4">Dashboard y Resumen Gerencial</h3>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm bg-primary text-white text-center" style="border-radius: 1rem;">
+            <div class="card-body py-4">
+                <h6 class="text-uppercase fw-semibold mb-2" style="letter-spacing: 1px;">Valor Total de Inventario</h6>
+                <h2 class="fw-bold mb-0">C$ @ValorTotalInventario.ToString("N2")</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h4 class="fw-semibold mb-3"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Alertas de Desabastecimiento</h4>
+
+@if (alertasDesabastecimiento.Any())
+{
+    <div class="row">
+        @foreach (var alerta in alertasDesabastecimiento)
+        {
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card border-start border-danger border-4 shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="fw-bold">@alerta.Prenda?.Marca - @alerta.Prenda?.Categoria?.NombreCategoria</h6>
+                        <p class="mb-1 text-muted">Talla: <strong>@alerta.Talla.NombreTalla</strong> | Color: <strong>@alerta.Color.NombreColor</strong></p>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="badge bg-danger rounded-pill px-3 py-2">Stock: @alerta.StockFisicoActual</span>
+                            <small class="text-muted">Límite: @alerta.LimiteAlerta</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="alert alert-success border-0 shadow-sm d-flex align-items-center" role="alert">
+        <i class="bi bi-check-circle-fill me-3 fs-4"></i>
+        <div>
+            <h5 class="alert-heading mb-1">¡Todo en orden!</h5>
+            <p class="mb-0">Todos los niveles de inventario están por encima de su límite de alerta saludable.</p>
+        </div>
+    </div>
+}
+
+@code {
+    private decimal ValorTotalInventario;
+    private List<VariantePrenda> alertasDesabastecimiento = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ValorTotalInventario = await DashboardService.CalcularValorInventario();
+        alertasDesabastecimiento = await DashboardService.ObtenerAlertasStock();
+    }
+}

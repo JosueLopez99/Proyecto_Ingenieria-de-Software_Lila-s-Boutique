@@ -1,0 +1,319 @@
+﻿@page "/parametros"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using LilasBoutique.Models
+@using LilasBoutique.Data
+@inject IInventarioService InventarioService
+
+<h3 class="fw-bold mb-4">Gestión de Atributos de Prenda</h3>
+
+@if (!string.IsNullOrEmpty(mensajeNotificacion))
+{
+    <div class="alert @(esError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+        <i class="bi @(esError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill") me-2"></i>
+        @mensajeNotificacion
+        <button type="button" class="btn-close" @onclick="() => mensajeNotificacion = string.Empty"></button>
+    </div>
+}
+
+<div class="row g-4">
+    <!-- Panel de Categorías -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-primary text-white fw-bold">
+                <i class="bi bi-tags me-2"></i>@(nuevaCategoria.IdCategoria == 0 ? "Nueva" : "Editar") Categoría
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label small">Nombre de Categoría</label>
+                    <InputText @bind-Value="nuevaCategoria.NombreCategoria" class="form-control" placeholder="Ej: Camisas" />
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary w-100" @onclick="GuardarCategoria">
+                        @(nuevaCategoria.IdCategoria == 0 ? "Guardar" : "Actualizar") Categoría
+                    </button>
+                    @if (nuevaCategoria.IdCategoria != 0)
+                    {
+                        <button class="btn btn-secondary w-50" @onclick="() => nuevaCategoria = new Categoria()">Cancelar</button>
+                    }
+                </div>
+
+                <hr class="my-4" />
+                <h6 class="fw-bold text-secondary">Registradas:</h6>
+                <ul class="list-group list-group-flush small">
+                    @foreach (var cat in categorias)
+                    {
+                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                            @cat.NombreCategoria
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-outline-primary border-0" @onclick="() => EditarCategoria(cat)">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger border-0" @onclick="() => BorrarCategoria(cat.IdCategoria)">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de Tallas -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-success text-white fw-bold">
+                <i class="bi bi-rulers me-2"></i>@(nuevaTalla.IdTalla == 0 ? "Nueva" : "Editar") Talla
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label small">Categoría Perteneciente</label>
+                    <InputSelect @bind-Value="nuevaTalla.CategoriaId" class="form-select">
+                        <option value="0">Seleccione...</option>
+                        @foreach (var cat in categorias)
+                        {
+                            <option value="@cat.IdCategoria">@cat.NombreCategoria</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">Nombre de Talla</label>
+                    <InputText @bind-Value="nuevaTalla.NombreTalla" class="form-control" placeholder="Ej: S, M, L o 32" />
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success w-100" @onclick="GuardarTalla">
+                        @(nuevaTalla.IdTalla == 0 ? "Guardar" : "Actualizar") Talla
+                    </button>
+                    @if (nuevaTalla.IdTalla != 0)
+                    {
+                        <button class="btn btn-secondary w-50" @onclick="() => nuevaTalla = new Talla()">Cancelar</button>
+                    }
+                </div>
+
+                <hr class="my-4" />
+                <h6 class="fw-bold text-secondary">Registradas:</h6>
+                <ul class="list-group list-group-flush small">
+                    @foreach (var talla in tallas)
+                    {
+                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                            @talla.NombreTalla
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-outline-success border-0" @onclick="() => EditarTalla(talla)">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger border-0" @onclick="() => BorrarTalla(talla.IdTalla)">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de Colores -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-warning text-dark fw-bold">
+                <i class="bi bi-palette me-2"></i>@(nuevoColor.IdColor == 0 ? "Nuevo" : "Editar") Color
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label small">Nombre del Color</label>
+                    <InputText @bind-Value="nuevoColor.NombreColor" class="form-control" placeholder="Ej: Azul Marino" />
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-warning w-100 fw-bold" @onclick="GuardarColor">
+                        @(nuevoColor.IdColor == 0 ? "Guardar" : "Actualizar") Color
+                    </button>
+                    @if (nuevoColor.IdColor != 0)
+                    {
+                        <button class="btn btn-secondary w-50" @onclick="() => nuevoColor = new Color()">Cancelar</button>
+                    }
+                </div>
+
+                <hr class="my-4" />
+                <h6 class="fw-bold text-secondary">Registrados:</h6>
+                <ul class="list-group list-group-flush small">
+                    @foreach (var color in colores)
+                    {
+                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                            @color.NombreColor
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-outline-warning border-0" @onclick="() => EditarColor(color)">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger border-0" @onclick="() => BorrarColor(color.IdColor)">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string mensajeNotificacion = "";
+    private bool esError = false;
+
+    private Categoria nuevaCategoria = new();
+    private Talla nuevaTalla = new();
+    private Color nuevoColor = new();
+
+    private List<Categoria> categorias = new();
+    private List<Talla> tallas = new();
+    private List<Color> colores = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await CargarListas();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error crítico al cargar atributos: {ex.Message}");
+        }
+    }
+
+    private async Task CargarListas()
+    {
+        categorias = await InventarioService.ObtenerCategorias();
+        tallas = await InventarioService.ObtenerTallas();
+        colores = await InventarioService.ObtenerColores();
+    }
+
+    // --- MÉTODOS DE CARGA PARA EDICIÓN ---
+    private void EditarCategoria(Categoria cat)
+    {
+        nuevaCategoria = new Categoria { IdCategoria = cat.IdCategoria, NombreCategoria = cat.NombreCategoria };
+    }
+
+    private void EditarTalla(Talla talla)
+    {
+        nuevaTalla = new Talla { IdTalla = talla.IdTalla, NombreTalla = talla.NombreTalla, CategoriaId = talla.CategoriaId };
+    }
+
+    private void EditarColor(Color color)
+    {
+        nuevoColor = new Color { IdColor = color.IdColor, NombreColor = color.NombreColor };
+    }
+
+    // --- MÉTODOS DE GUARDADO (CREAR Y ACTUALIZAR) ---
+    private async Task GuardarCategoria()
+    {
+        if (string.IsNullOrWhiteSpace(nuevaCategoria.NombreCategoria))
+        {
+            mensajeNotificacion = "Por favor, escribe un nombre para la Categoría."; esError = true; return;
+        }
+
+        if (nuevaCategoria.IdCategoria == 0)
+        {
+            await InventarioService.AgregarCategoria(nuevaCategoria);
+            mensajeNotificacion = "¡Categoría guardada exitosamente!";
+        }
+        else
+        {
+            await InventarioService.ActualizarCategoria(nuevaCategoria);
+            mensajeNotificacion = "¡Categoría actualizada exitosamente!";
+        }
+
+        nuevaCategoria = new Categoria();
+        esError = false;
+        await CargarListas();
+    }
+
+    private async Task GuardarTalla()
+    {
+        if (nuevaTalla.CategoriaId == 0 || string.IsNullOrWhiteSpace(nuevaTalla.NombreTalla))
+        {
+            mensajeNotificacion = "Por favor, selecciona una categoría y escribe un nombre para la Talla."; esError = true; return;
+        }
+
+        if (nuevaTalla.IdTalla == 0)
+        {
+            await InventarioService.AgregarTalla(nuevaTalla);
+            mensajeNotificacion = "¡Talla guardada exitosamente!";
+        }
+        else
+        {
+            await InventarioService.ActualizarTalla(nuevaTalla);
+            mensajeNotificacion = "¡Talla actualizada exitosamente!";
+        }
+
+        nuevaTalla = new Talla();
+        esError = false;
+        await CargarListas();
+    }
+
+    private async Task GuardarColor()
+    {
+        if (string.IsNullOrWhiteSpace(nuevoColor.NombreColor))
+        {
+            mensajeNotificacion = "Por favor, escribe un nombre para el Color."; esError = true; return;
+        }
+
+        if (nuevoColor.IdColor == 0)
+        {
+            await InventarioService.AgregarColor(nuevoColor);
+            mensajeNotificacion = "¡Color guardado exitosamente!";
+        }
+        else
+        {
+            await InventarioService.ActualizarColor(nuevoColor);
+            mensajeNotificacion = "¡Color actualizado exitosamente!";
+        }
+
+        nuevoColor = new Color();
+        esError = false;
+        await CargarListas();
+    }
+
+    // --- MÉTODOS DE BORRADO ---
+    private async Task BorrarCategoria(int id)
+    {
+        try
+        {
+            await InventarioService.EliminarCategoria(id);
+            await CargarListas();
+            mensajeNotificacion = "Categoría eliminada correctamente."; esError = false;
+        }
+        catch (Exception)
+        {
+            mensajeNotificacion = "No se puede eliminar: Esta categoría ya está siendo usada."; esError = true;
+        }
+    }
+
+    private async Task BorrarTalla(int id)
+    {
+        try
+        {
+            await InventarioService.EliminarTalla(id);
+            await CargarListas();
+            mensajeNotificacion = "Talla eliminada correctamente."; esError = false;
+        }
+        catch (Exception)
+        {
+            mensajeNotificacion = "No se puede eliminar: Esta talla ya está asignada a una variante."; esError = true;
+        }
+    }
+
+    private async Task BorrarColor(int id)
+    {
+        try
+        {
+            await InventarioService.EliminarColor(id);
+            await CargarListas();
+            mensajeNotificacion = "Color eliminado correctamente."; esError = false;
+        }
+        catch (Exception)
+        {
+            mensajeNotificacion = "No se puede eliminar: Este color ya está asignado a una variante."; esError = true;
+        }
+    }
+}

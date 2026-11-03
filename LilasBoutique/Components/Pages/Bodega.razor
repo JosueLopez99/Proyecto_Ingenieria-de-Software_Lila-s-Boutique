@@ -1,0 +1,173 @@
+﻿@page "/bodega"
+@attribute [Authorize(Roles = "Administrador, Bodeguero")]
+@rendermode InteractiveServer
+@using LilasBoutique.Models
+@using LilasBoutique.Data
+@inject IInventarioService InventarioService
+
+<h3 class="fw-bold mb-4">Gestión de Bodega</h3>
+
+@if (!string.IsNullOrEmpty(mensajeNotificacion))
+{
+    <div class="alert @(esError ? "alert-danger" : "alert-success") alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi @(esError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill") me-2"></i>
+        @mensajeNotificacion
+        <button type="button" class="btn-close" @onclick="() => mensajeNotificacion = string.Empty"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm p-4">
+    <!-- Fila 1: Operación y Cantidad -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <label class="form-label text-secondary small">Tipo de Operación</label>
+            <select class="form-select" @bind="tipoOperacion">
+                <option value="Entrada (Proveedores)">Entrada (Proveedores)</option>
+                <option value="Salida (Merma/Daño)">Salida (Merma/Daño)</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label text-secondary small">Cantidad Física Afectada</label>
+            <InputNumber class="form-control text-primary fw-bold" @bind-Value="cantidadAfectada" min="1" />
+        </div>
+    </div>
+
+    <!-- Fila 2: Búsqueda y Selección -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <label class="form-label text-secondary small">Buscar y Seleccionar Variante</label>
+            <div class="input-group mb-2">
+                <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" placeholder="Filtre por marca, categoría o color..."
+                       @bind="TextoBusqueda" @bind:event="oninput" />
+            </div>
+
+            <select class="form-select" @bind="varianteSeleccionadaId">
+                <option value="0">Seleccione una variante...</option>
+                @foreach (var v in variantesFiltradas)
+                {
+                    <option value="@v.IdVariante">
+                        @v.Prenda?.Marca - @v.Prenda?.Categoria?.NombreCategoria | Talla: @v.Talla?.NombreTalla | Color: @v.Color?.NombreColor (Stock actual: @v.StockFisicoActual)
+                    </option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <!-- Fila 3: Justificación -->
+    <div class="mb-4">
+        <label class="form-label text-secondary small">Justificación de Movimiento</label>
+        <textarea class="form-control" rows="3" placeholder="Detalle el motivo de la operación..." @bind="justificacion"></textarea>
+    </div>
+
+    <button class="btn btn-primary fw-bold w-100" @onclick="ProcesarMovimiento">
+        <i class="bi bi-download me-2"></i> Procesar Movimiento de Inventario
+    </button>
+</div>
+
+@code {
+    private string mensajeNotificacion = "";
+    private bool esError = false;
+
+    private string tipoOperacion = "Entrada (Proveedores)";
+    private int varianteSeleccionadaId = 0;
+    private int cantidadAfectada = 0;
+    private string justificacion = "";
+
+    private List<VariantePrenda> catalogoCompleto = new();
+    private List<VariantePrenda> variantesFiltradas = new();
+
+    private string _textoBusqueda = "";
+    private string TextoBusqueda
+    {
+        get => _textoBusqueda;
+        set
+        {
+            _textoBusqueda = value;
+            FiltrarVariantes();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            catalogoCompleto = await InventarioService.ObtenerCatalogo();
+            variantesFiltradas = catalogoCompleto.ToList();
+        }
+        catch (Exception ex)
+        {
+            MostrarMensaje($"Error al cargar el inventario: {ex.Message}", true);
+        }
+    }
+
+    private void FiltrarVariantes()
+    {
+        if (string.IsNullOrWhiteSpace(TextoBusqueda))
+        {
+            variantesFiltradas = catalogoCompleto.ToList();
+        }
+        else
+        {
+            var busqueda = TextoBusqueda.ToLower();
+            variantesFiltradas = catalogoCompleto.Where(v =>
+                (v.Prenda?.Marca?.ToLower().Contains(busqueda) ?? false) ||
+                (v.Prenda?.Categoria?.NombreCategoria?.ToLower().Contains(busqueda) ?? false) ||
+                (v.Color?.NombreColor?.ToLower().Contains(busqueda) ?? false)
+            ).ToList();
+        }
+
+        if (!variantesFiltradas.Any(v => v.IdVariante == varianteSeleccionadaId))
+        {
+            varianteSeleccionadaId = 0;
+        }
+    }
+
+    private async Task ProcesarMovimiento()
+    {
+        if (varianteSeleccionadaId == 0)
+        {
+            MostrarMensaje("Debe seleccionar una variante del catálogo.", true); return;
+        }
+        if (cantidadAfectada <= 0)
+        {
+            MostrarMensaje("La cantidad afectada debe ser mayor a cero.", true); return;
+        }
+        if (string.IsNullOrWhiteSpace(justificacion))
+        {
+            MostrarMensaje("Debe ingresar una justificación para este movimiento.", true); return;
+        }
+
+        try
+        {
+            // NOTA: Asegúrate de que el UsuarioId "1" exista en tu base de datos, de lo contrario esto causará un error de FK.
+            await InventarioService.RegistrarMovimientoBodega(varianteSeleccionadaId, tipoOperacion, cantidadAfectada, 1, justificacion);
+
+            MostrarMensaje($"Movimiento registrado exitosamente. Se ha {(tipoOperacion.Contains("Salida") ? "restado" : "sumado")} {cantidadAfectada} al stock.", false);
+
+            catalogoCompleto = await InventarioService.ObtenerCatalogo();
+            FiltrarVariantes();
+
+            cantidadAfectada = 0;
+            justificacion = "";
+            varianteSeleccionadaId = 0;
+            TextoBusqueda = "";
+        }
+        catch (Exception ex)
+        {
+            // Extrae el error específico de SQL Server
+            string errorReal = ex.Message;
+            if (ex.InnerException != null)
+            {
+                errorReal += " | Detalle SQL: " + ex.InnerException.Message;
+            }
+            MostrarMensaje($"Error de Base de Datos: {errorReal}", true);
+        }
+    }
+
+    private void MostrarMensaje(string mensaje, bool error)
+    {
+        mensajeNotificacion = mensaje;
+        esError = error;
+    }
+}

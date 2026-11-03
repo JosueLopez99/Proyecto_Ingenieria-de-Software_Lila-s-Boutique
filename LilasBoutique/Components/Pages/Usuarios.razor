@@ -1,0 +1,91 @@
+﻿@page "/usuarios"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using LilasBoutique.Models
+@using LilasBoutique.Data
+@using Microsoft.AspNetCore.Authorization
+@inject IUsuarioService UsuarioService
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">Gestión de Accesos (RBAC)</h3>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4 py-3 text-secondary fw-semibold">Correo Electrónico</th>
+                        <th class="py-3 text-secondary fw-semibold">Nivel de Privilegio</th>
+                        <th class="py-3 text-secondary fw-semibold text-center">Estado</th>
+                        <th class="pe-4 py-3 text-secondary fw-semibold text-end">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in listaUsuarios)
+                    {
+                        <tr>
+                            <td class="ps-4 fw-semibold text-dark">
+                                <i class="bi bi-person-circle text-muted me-2 fs-5 align-middle"></i>@user.Correo
+                            </td>
+                            <td style="width: 250px;">
+                                <select @bind="user.RolId" class="form-select form-select-sm bg-light">
+                                    @foreach (var rol in listaRoles)
+                                    {
+                                        <option value="@rol.IdRol">@rol.NombreRol</option>
+                                    }
+                                </select>
+                            </td>
+                            <td class="text-center">
+                                @if (user.EstadoActivo)
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3">Activo</span>
+                                }
+                                else
+                                {
+
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3">Inactivo</span>
+                                }
+                            </td>
+                            <td class="pe-4 text-end">
+                                <button class="btn btn-sm btn-outline-primary shadow-sm" @onclick="() => GuardarCambiosRol(user)">Guardar Cambio</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(mensajeSistema))
+{
+    <div class="alert alert-info border-0 shadow-sm mt-4">
+        <i class="bi bi-info-circle me-2"></i>@mensajeSistema
+    </div>
+}
+
+@code {
+    // [Mantener exactamente el mismo bloque @code de la respuesta anterior de Usuarios.razor]
+    private List<Usuario> listaUsuarios = new();
+    private List<Rol> listaRoles = new();
+    private string mensajeSistema = "";
+
+    protected override async Task OnInitializedAsync() => await CargarDatos();
+    private async Task CargarDatos()
+    {
+        listaUsuarios = await UsuarioService.ObtenerTodos();
+        listaRoles = await UsuarioService.ObtenerRoles();
+    }
+    private async Task GuardarCambiosRol(Usuario user)
+    {
+        try
+        {
+            await UsuarioService.ActualizarRol(user.IdUsuario, user.RolId);
+            mensajeSistema = $"Rol del usuario {user.Correo} actualizado correctamente.";
+            await CargarDatos();
+        }
+        catch (Exception ex) { mensajeSistema = $"Error al actualizar: {ex.Message}"; }
+    }
+}

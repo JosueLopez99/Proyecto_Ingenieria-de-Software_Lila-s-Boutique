@@ -1,0 +1,68 @@
+﻿@page "/configuracion"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using LilasBoutique.DTOs
+@using LilasBoutique.Data
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IUsuarioService UsuarioService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <h3 class="fw-bold mb-4">Seguridad de la Cuenta</h3>
+
+        <div class="card border-0 shadow-sm" style="border-radius: 1rem;">
+            <div class="card-body p-4 p-md-5">
+                <EditForm Model="cambiocontraseña" OnValidSubmit="CambiarPassword" FormName="formConfiguracion">
+                    <DataAnnotationsValidator />
+                    <AntiforgeryToken />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary small text-uppercase">Contraseña Actual</label>
+                        <InputText @bind-Value="cambiocontraseña.Actual" type="password" class="form-control form-control-lg bg-light" />
+                    </div>
+                    <hr class="text-muted my-4" />
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary small text-uppercase">Nueva Contraseña</label>
+                        <InputText @bind-Value="cambiocontraseña.Nueva" type="password" class="form-control form-control-lg bg-light" />
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-secondary small text-uppercase">Confirmar Nueva Contraseña</label>
+                        <InputText @bind-Value="cambiocontraseña.Confirmacion" type="password" class="form-control form-control-lg bg-light" />
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-warning btn-lg fw-bold shadow-sm text-dark">Actualizar Credenciales</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // [Mantener exactamente el mismo bloque @code de la respuesta anterior de Configuracion.razor]
+    [SupplyParameterFromForm]
+    public CambioContraseñaDTO cambiocontraseña { get; set; } = new();
+
+    private async Task CambiarPassword()
+    {
+        if (cambiocontraseña.Nueva == cambiocontraseña.Confirmacion)
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity is not null && user.Identity.IsAuthenticated)
+            {
+                var idClaim = user.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(idClaim, out int usuarioId))
+                {
+                    await UsuarioService.ActualizarPassword(usuarioId, BCrypt.Net.BCrypt.HashPassword(cambiocontraseña.Nueva));
+                    cambiocontraseña = new CambioContraseñaDTO();
+                }
+            }
+        }
+    }
+}

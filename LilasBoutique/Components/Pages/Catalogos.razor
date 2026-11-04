@@ -1,102 +1,390 @@
 ﻿@page "/catalogos"
+@attribute [Authorize(Roles = "Administrador, Vendedor, Bodeguero")]
 @rendermode InteractiveServer
-@attribute [Authorize]
-@using LilasBoutique.Data
 @using LilasBoutique.Models
-@using System.Security.Claims
+@using LilasBoutique.Data
 @using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Components.Authorization
 @inject IInventarioService InventarioService
-@inject AuthenticationStateProvider AuthStateProvider
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="fw-bold mb-0">Catálogo General</h3>
-</div>
+<h3 class="fw-bold mb-4">Catálogo General</h3>
 
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body p-4">
-        <div class="row align-items-center mb-4">
-            <div class="col-md-6">
-                <div class="input-group">
-                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                    <InputText @bind-Value="filtroMarca" placeholder="Buscar por código, marca, categoría o talla..." class="form-control" />
-                    <button class="btn btn-primary px-4" @onclick="Buscar">Filtrar</button>
-                </div>
+@if (!string.IsNullOrEmpty(mensajeNotificacion))
+{
+    <div class="alert @(esError ? "alert-danger" : "alert-success") alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi @(esError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill") me-2"></i>
+        <strong>@(esError ? "Error: " : "¡Éxito! ")</strong> @mensajeNotificacion
+        <button type="button" class="btn-close" @onclick="() => mensajeNotificacion = string.Empty"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm p-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" placeholder="Buscar por código, marca, categoría o talla..."
+                       @bind="TextoBusqueda" @bind:event="oninput" />
+                <button class="btn btn-primary px-4" @onclick="FiltrarCatalogo">Filtrar</button>
             </div>
         </div>
+    </div>
 
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="text-secondary fw-semibold">Marca</th>
-                        <th class="text-secondary fw-semibold">Categoría</th>
-                        <th class="text-secondary fw-semibold">Talla</th>
-                        <th class="text-secondary fw-semibold">Color</th>
-                        <th class="text-secondary fw-semibold text-center">Stock</th>
-                        <th class="text-secondary fw-semibold">Precio</th>
-                        <th class="text-secondary fw-semibold text-end">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in catalogoFiltrado)
-                    {
+    <div class="table-responsive">
+        <ErrorBoundary>
+            <ChildContent>
+                <table class="table table-hover align-middle text-center">
+                    <thead class="table-light">
                         <tr>
-                            <td class="fw-semibold text-dark">@item.Prenda.Marca?</td>
-                            <td><span class="badge bg-light text-dark border">@item.Prenda.Categoria?.NombreCategoria</span></td>
-                            <td>@item.Talla.NombreTalla</td>
-                            <td>@item.Color.NombreColor</td>
-                            <td class="text-center">
-                                <span class="badge @(item.StockFisicoActual <= item.LimiteAlerta ? "bg-danger" : "bg-success") rounded-pill px-3">
-                                    @item.StockFisicoActual
-                                </span>
-                            </td>
-                            <td class="fw-bold text-success">C$ @item.Precio.ToString("N2")</td>
-                            <td class="text-end">
-                                <div class="btn-group shadow-sm">
-                                    <button class="btn btn-sm btn-outline-secondary" title="Actualizar"><i class="bi bi-pencil"></i></button>
-                                    <button class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="bi bi-trash"></i></button>
-                                    <button class="btn btn-sm btn-primary" title="Registrar Venta" @onclick="() => RegistrarVentaLocal(item.IdVariante, 1)">
-                                        <i class="bi bi-cart-dash me-1"></i> Vender
-                                    </button>
-                                </div>
-                            </td>
+                            <th class="text-start">Marca</th>
+                            <th>Categoría</th>
+                            <th>Talla</th>
+                            <th>Color</th>
+                            <th>Stock</th>
+                            <th>Precio</th>
+                            <th class="text-end">Acciones</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody>
+                        @if (cargando)
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status"></div>
+                                    <div class="mt-2 text-muted">Cargando catálogo...</div>
+                                </td>
+                            </tr>
+                        }
+                        else if (!catalogoFiltrado.Any())
+                        {
+                            <tr><td colspan="7" class="text-muted py-4">No se encontraron prendas en el catálogo.</td></tr>
+                        }
+                        else
+                        {
+                            @foreach (var item in catalogoFiltrado)
+                            {
+                                <tr @key="item.IdVariante">
+                                    <td class="text-start fw-semibold text-dark">@(item.Prenda?.Marca ?? "Sin Marca")</td>
+                                    <td><span class="badge bg-light text-dark border">@(item.Prenda?.Categoria?.NombreCategoria ?? "Sin Categoría")</span></td>
+                                    <td>@(item.Talla?.NombreTalla ?? "-")</td>
+                                    <td>@(item.Color?.NombreColor ?? "-")</td>
+                                    <td>
+                                        <span class="badge @(item.StockFisicoActual <= item.LimiteAlerta ? "bg-danger" : "bg-success") rounded-pill px-3 py-2">
+                                            @item.StockFisicoActual
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold text-success">C$ @(item.Precio)</td>
+                                    <td class="text-end">
+                                        <div class="btn-group">
+                                            @if (esAdministrador)
+                                            {
+                                                <button class="btn btn-sm btn-outline-secondary" title="Editar Prenda y Precio" @onclick="() => AbrirModalEdicion(item)">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" title="Eliminar" @onclick="() => IniciarEliminacion(item.IdVariante)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+
+                                            @if (puedeVender)
+                                            {
+                                                <button class="btn btn-sm btn-primary fw-bold ms-1" @onclick="() => AbrirModalVenta(item)">
+                                                    <i class="bi bi-cart-plus me-1"></i> Vender
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </ChildContent>
+            <ErrorContent Context="ex">
+                <div class="alert alert-danger m-3">
+                    <h5 class="fw-bold"><i class="bi bi-bug me-2"></i>Error interno de renderizado</h5>
+                    <p>Se encontró un error que impidió dibujar la tabla:</p>
+                    <code>@ex.Message</code>
+                </div>
+            </ErrorContent>
+        </ErrorBoundary>
     </div>
 </div>
 
+<!-- ================= MODAL DE VENTA ================= -->
+@if (mostrarModalVenta)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-cart-check me-2"></i>Registrar Venta</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModales"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2"><strong>Prenda:</strong> @varianteSeleccionada?.Prenda?.Marca - @varianteSeleccionada?.Prenda?.Categoria?.NombreCategoria</p>
+                    <p class="mb-4"><strong>Talla:</strong> @varianteSeleccionada?.Talla?.NombreTalla | <strong>Color:</strong> @varianteSeleccionada?.Color?.NombreColor</p>
+
+                    <div class="alert alert-info py-2">
+                        <i class="bi bi-box-seam me-2"></i>Stock Disponible: <strong>@varianteSeleccionada?.StockFisicoActual unidades</strong>
+                    </div>
+
+                    <label class="form-label fw-bold">Cantidad a Vender:</label>
+                    <input type="number" @bind="cantidadVenta" class="form-control form-control-lg text-center" min="1" max="@varianteSeleccionada?.StockFisicoActual" />
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModales">Cancelar</button>
+                    <button type="button" class="btn btn-success fw-bold" @onclick="ConfirmarVenta">Confirmar Venta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ================= MODAL DE EDICIÓN (MARCA Y PRECIO) ================= -->
+@if (esAdministrador && mostrarModalEdicion)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Editar Prenda y Precio</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModales"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Marca de la Prenda:</label>
+                        <input type="text" @bind="varianteSeleccionada!.Prenda!.Marca" class="form-control form-control-lg" placeholder="Ingrese la marca..." />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nuevo Precio de Venta (C$):</label>
+                        <input type="number" @bind="varianteSeleccionada!.Precio" class="form-control form-control-lg" min="0" step="any" />
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CerrarModales">Cancelar</button>
+                    <button type="button" class="btn btn-primary fw-bold" @onclick="ConfirmarEdicion">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ================= MODAL DE ADVERTENCIA PARA ELIMINAR ================= -->
+@if (esAdministrador && mostrarModalEliminacion)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Advertencia de Eliminación</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModales"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="bi bi-trash3 text-warning display-4 mb-3"></i>
+                    <p class="fs-5 mb-1">¿Está seguro de que desea eliminar esta variante?</p>
+                    <p class="text-muted small">Esta acción borrará el registro del catálogo general permanentemente.</p>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModales">Cancelar</button>
+                    <button type="button" class="btn btn-danger fw-bold" @onclick="EjecutarEliminacion">Sí, Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
-    private string filtroMarca = "";
+    private string mensajeNotificacion = "";
+    private bool esError = false;
+    private bool cargando = true;
+    private bool esAdministrador = false;
+    private bool puedeVender = false;
+
+    private List<VariantePrenda> catalogoCompleto = new();
     private List<VariantePrenda> catalogoFiltrado = new();
 
-    protected override async Task OnInitializedAsync() => await CargarCatalogo();
-    private async Task Buscar() => await CargarCatalogo();
-    private async Task CargarCatalogo() => catalogoFiltrado = await InventarioService.ObtenerCatalogo(filtroMarca);
+    private string _textoBusqueda = "";
+    private string TextoBusqueda
+    {
+        get => _textoBusqueda;
+        set { _textoBusqueda = value; FiltrarCatalogo(); }
+    }
 
-    private async Task RegistrarVentaLocal(int varianteId, int cantidad)
+    private bool mostrarModalVenta = false;
+    private bool mostrarModalEdicion = false;
+    private bool mostrarModalEliminacion = false;
+    private VariantePrenda varianteSeleccionada = new();
+    private int idVarianteAEliminar = 0;
+    private int cantidadVenta = 1;
+
+    protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
-        if (user.Identity is not null && user.Identity.IsAuthenticated)
+        if (user.Identity != null && user.Identity.IsAuthenticated)
         {
-            var idClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(idClaim, out int usuarioId))
+            esAdministrador = user.IsInRole("Administrador");
+            // Solo Administrador y Vendedor pueden ver el botón de procesar ventas
+            puedeVender = user.IsInRole("Administrador") || user.IsInRole("Vendedor");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
             {
-                try
-                {
-                    await InventarioService.RegistrarVenta(varianteId, cantidad, usuarioId);
-                    await CargarCatalogo();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error: {ex.Message}");
-                }
+                catalogoCompleto = await InventarioService.ObtenerCatalogo();
+                FiltrarCatalogo();
+                cargando = false;
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                MostrarMensaje($"Error crítico de base de datos: {ex.Message}", true);
+                cargando = false;
+                StateHasChanged();
             }
         }
+    }
+
+    private void FiltrarCatalogo()
+    {
+        if (catalogoCompleto == null) return;
+
+        if (string.IsNullOrWhiteSpace(TextoBusqueda))
+        {
+            catalogoFiltrado = catalogoCompleto.Where(v => v != null).ToList();
+        }
+        else
+        {
+            var b = TextoBusqueda.ToLower();
+            catalogoFiltrado = catalogoCompleto.Where(v => v != null && (
+                (v.Prenda?.Marca?.ToLower().Contains(b) ?? false) ||
+                (v.Prenda?.Categoria?.NombreCategoria?.ToLower().Contains(b) ?? false) ||
+                (v.Talla?.NombreTalla?.ToLower().Contains(b) ?? false) ||
+                (v.Color?.NombreColor?.ToLower().Contains(b) ?? false)
+            )).ToList();
+        }
+    }
+
+    private void AbrirModalVenta(VariantePrenda variante)
+    {
+        if (variante.StockFisicoActual <= 0)
+        {
+            MostrarMensaje("No hay stock disponible para vender esta prenda.", true);
+            return;
+        }
+        varianteSeleccionada = variante;
+        cantidadVenta = 1;
+        mostrarModalVenta = true;
+        MostrarMensaje("", false);
+    }
+
+    private async Task ConfirmarVenta()
+    {
+        if (cantidadVenta <= 0)
+        {
+            MostrarMensaje("Debe ingresar una cantidad válida mayor a 0.", true);
+            CerrarModales();
+            return;
+        }
+
+        if (cantidadVenta > varianteSeleccionada.StockFisicoActual)
+        {
+            MostrarMensaje($"Error: Solo hay {varianteSeleccionada.StockFisicoActual} unidades en stock.", true);
+            CerrarModales();
+            return;
+        }
+
+        try
+        {
+            await InventarioService.RegistrarVenta(varianteSeleccionada.IdVariante, cantidadVenta, 1);
+            MostrarMensaje($"¡Venta registrada exitosamente! Se descontaron {cantidadVenta} unidades.", false);
+            CerrarModales();
+
+            catalogoCompleto = await InventarioService.ObtenerCatalogo();
+            FiltrarCatalogo();
+        }
+        catch (Exception ex)
+        {
+            MostrarMensaje($"Error al procesar la venta: {ex.Message}", true);
+            CerrarModales();
+        }
+    }
+
+    private void AbrirModalEdicion(VariantePrenda variante)
+    {
+        varianteSeleccionada = new VariantePrenda
+        {
+            IdVariante = variante.IdVariante,
+            Precio = variante.Precio,
+            PrendaId = variante.PrendaId,
+            Prenda = new Prenda
+            {
+                IdPrenda = variante.Prenda?.IdPrenda ?? 0,
+                Marca = variante.Prenda?.Marca ?? "",
+                CategoriaId = variante.Prenda?.CategoriaId ?? 0
+            }
+        };
+        mostrarModalEdicion = true;
+    }
+
+    private async Task ConfirmarEdicion()
+    {
+        try
+        {
+            await InventarioService.ActualizarVariante(varianteSeleccionada);
+            MostrarMensaje("¡Prenda y precio actualizados correctamente!", false);
+            CerrarModales();
+
+            catalogoCompleto = await InventarioService.ObtenerCatalogo();
+            FiltrarCatalogo();
+        }
+        catch (Exception ex)
+        {
+            MostrarMensaje($"Error al actualizar: {ex.Message}", true);
+        }
+    }
+
+    private void IniciarEliminacion(int id)
+    {
+        idVarianteAEliminar = id;
+        mostrarModalEliminacion = true;
+    }
+
+    private async Task EjecutarEliminacion()
+    {
+        try
+        {
+            await InventarioService.EliminarVariante(idVarianteAEliminar);
+            CerrarModales();
+            MostrarMensaje("¡El registro fue eliminado exitosamente del catálogo!", false);
+
+            catalogoCompleto = await InventarioService.ObtenerCatalogo();
+            FiltrarCatalogo();
+        }
+        catch (Exception)
+        {
+            CerrarModales();
+            MostrarMensaje("No se puede eliminar: Esta prenda ya tiene un historial de movimientos en bodega.", true);
+        }
+    }
+
+    private void CerrarModales()
+    {
+        mostrarModalVenta = false;
+        mostrarModalEdicion = false;
+        mostrarModalEliminacion = false;
+    }
+
+    private void MostrarMensaje(string msj, bool error)
+    {
+        mensajeNotificacion = msj;
+        esError = error;
     }
 }

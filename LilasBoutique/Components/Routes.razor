@@ -1,22 +1,14 @@
 ﻿<CascadingAuthenticationState>
     <Router AppAssembly="@typeof(Program).Assembly">
         <Found Context="routeData">
-            @if (routeData.PageType.Name == "Login")
-            {
-                <RouteView RouteData="@routeData" />
-            }
-            else
-            {
-                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)">
-                    <NotAuthorized>
-                        <!-- Tu HTML de Acceso Denegado -->
-                    </NotAuthorized>
-                </AuthorizeRouteView>
-            }
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
         </Found>
         <NotFound>
-            <!-- Tu HTML de Página no encontrada -->
+            <PageTitle>No encontrado</PageTitle>
+            <LayoutView Layout="@typeof(Layout.MainLayout)">
+                <p role="alert">Página no encontrada.</p>
+            </LayoutView>
         </NotFound>
     </Router>
 </CascadingAuthenticationState>

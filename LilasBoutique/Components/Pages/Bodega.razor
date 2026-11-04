@@ -1,8 +1,9 @@
 ﻿@page "/bodega"
-@attribute [Authorize(Roles = "Administrador, Bodeguero")]
 @rendermode InteractiveServer
 @using LilasBoutique.Models
 @using LilasBoutique.Data
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 @inject IInventarioService InventarioService
 
 <h3 class="fw-bold mb-4">Gestión de Bodega</h3>
@@ -22,8 +23,8 @@
         <div class="col-md-6">
             <label class="form-label text-secondary small">Tipo de Operación</label>
             <select class="form-select" @bind="tipoOperacion">
-                <option value="Entrada (Proveedores)">Entrada (Proveedores)</option>
-                <option value="Salida (Merma/Daño)">Salida (Merma/Daño)</option>
+                <option value="RECEPCION_PROVEEDOR">Entrada (Proveedores)</option>
+                <option value="MERMA_DAÑO">Salida (Merma/Daño)</option>
             </select>
         </div>
         <div class="col-md-6">
@@ -69,7 +70,7 @@
     private string mensajeNotificacion = "";
     private bool esError = false;
 
-    private string tipoOperacion = "Entrada (Proveedores)";
+    private string tipoOperacion = "RECEPCION_PROVEEDOR";
     private int varianteSeleccionadaId = 0;
     private int cantidadAfectada = 0;
     private string justificacion = "";
@@ -90,6 +91,16 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Validasion ti seguridad babaen ti rol: Administrador wenno Bodeguero laeng
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (!user.IsInRole("Administrador") && !user.IsInRole("Bodeguero"))
+        {
+            Navigation.NavigateTo("/catalogos");
+            return;
+        }
+
         try
         {
             catalogoCompleto = await InventarioService.ObtenerCatalogo();
@@ -140,10 +151,10 @@
 
         try
         {
-            // NOTA: Asegúrate de que el UsuarioId "1" exista en tu base de datos, de lo contrario esto causará un error de FK.
             await InventarioService.RegistrarMovimientoBodega(varianteSeleccionadaId, tipoOperacion, cantidadAfectada, 1, justificacion);
 
-            MostrarMensaje($"Movimiento registrado exitosamente. Se ha {(tipoOperacion.Contains("Salida") ? "restado" : "sumado")} {cantidadAfectada} al stock.", false);
+            string nombreOp = tipoOperacion == "RECEPCION_PROVEEDOR" ? "sumado" : "restado";
+            MostrarMensaje($"Movimiento registrado exitosamente. Se ha {nombreOp} {cantidadAfectada} al stock.", false);
 
             catalogoCompleto = await InventarioService.ObtenerCatalogo();
             FiltrarVariantes();
@@ -155,7 +166,6 @@
         }
         catch (Exception ex)
         {
-            // Extrae el error específico de SQL Server
             string errorReal = ex.Message;
             if (ex.InnerException != null)
             {

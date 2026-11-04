@@ -1,10 +1,7 @@
 ﻿using LilasBoutique.Components;
 using LilasBoutique.Data;
 using LilasBoutique.Models;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Components.Server;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,22 +21,24 @@ builder.Services.AddScoped<IInventarioService, InventarioService>();
 builder.Services.AddScoped<IBodegaService, BodegaService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 
-// 1. Registrar Autenticación por Cookies (Requisito de .NET 8)
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.LoginPath = "/"; // Si no está logueado, lo manda aquí
-        options.AccessDeniedPath = "/";
-    });
-
-// 2. Registrar Autorización global
-builder.Services.AddAuthorization();
-
-// Registramos el CustomAuthenticationStateProvider
+// 1. Registramos tu proveedor de autenticación personalizado
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 
-// Le indicamos a Blazor que use nuestro Custom provider cuando pida un AuthenticationStateProvider genérico
-builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
+// 2. Le indicamos a Blazor que el AuthenticationStateProvider global ES tu proveedor personalizado
+builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
+    provider.GetRequiredService<CustomAuthenticationStateProvider>());
+
+// 3. Activamos la autorización nativa para componentes de Blazor
+builder.Services.AddAuthorizationCore();
+
+// 4. Configuraciones de Blazor Server
+builder.Services.AddServerSideBlazor(options =>
+{
+    options.DetailedErrors = true;
+});
+
+// 5. Antiforgery configurado en la fase de servicios (ANTES del builder.Build)
+builder.Services.AddAntiforgery();
 
 var app = builder.Build();
 
@@ -47,7 +46,6 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -56,13 +54,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
 
-app.UseAuthentication();
-app.UseAuthorization();
-
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode().DisableAntiforgery();
-
-builder.Services.AddAntiforgery();
 
 // ==========================================
 // SEMBRADO DE DATOS (Data Seeding)
@@ -82,31 +75,52 @@ using (var scope = app.Services.CreateScope())
         context.SaveChanges();
     }
 
-    // 2. Crear el usuario Administrador por defecto si no hay usuarios
-    if (!context.Usuario.Any())
-    {
-        var rolAdmin = context.Rol.FirstOrDefault(r => r.NombreRol == "Administrador");
+    // 2. Comprobar y sembrar los roles individuales de manera segura
+    var rolAdmin = context.Rol.FirstOrDefault(r => r.NombreRol == "Administrador");
+    var rolVendedor = context.Rol.FirstOrDefault(r => r.NombreRol == "Vendedor");
+    var rolBodeguero = context.Rol.FirstOrDefault(r => r.NombreRol == "Bodeguero");
 
-        if (rolAdmin != null)
+    var nuevosUsuarios = new List<Usuario>();
+
+    if (rolAdmin != null && !context.Usuario.Any(u => u.Correo == "admin@lilasboutique.com"))
+    {
+        nuevosUsuarios.Add(new Usuario
         {
-            context.Usuario.Add(new Usuario
-            {
-                Correo = "admin@lilasboutique.com",
-                // Encriptamos la contraseña "admin123" usando BCrypt directamente
-                HashCredencial = BCrypt.Net.BCrypt.HashPassword("admin123"),
-                EstadoActivo = true,
-                RolId = rolAdmin.IdRol
-            });
-            context.SaveChanges();
-        }
+            Correo = "admin@lilasboutique.com",
+            HashCredencial = BCrypt.Net.BCrypt.HashPassword("admin123"),
+            EstadoActivo = true,
+            RolId = rolAdmin.IdRol
+        });
+    }
+
+    if (rolVendedor != null && !context.Usuario.Any(u => u.Correo == "vendedor@lilasboutique.com"))
+    {
+        nuevosUsuarios.Add(new Usuario
+        {
+            Correo = "vendedor@lilasboutique.com",
+            HashCredencial = BCrypt.Net.BCrypt.HashPassword("vendedor123"),
+            EstadoActivo = true,
+            RolId = rolVendedor.IdRol
+        });
+    }
+
+    if (rolBodeguero != null && !context.Usuario.Any(u => u.Correo == "bodeguero@lilasboutique.com"))
+    {
+        nuevosUsuarios.Add(new Usuario
+        {
+            Correo = "bodeguero@lilasboutique.com",
+            HashCredencial = BCrypt.Net.BCrypt.HashPassword("bodeguero123"),
+            EstadoActivo = true,
+            RolId = rolBodeguero.IdRol
+        });
+    }
+
+    if (nuevosUsuarios.Any())
+    {
+        context.Usuario.AddRange(nuevosUsuarios);
+        context.SaveChanges();
     }
 }
 // ==========================================
-
-app.MapPost("/logout", async (HttpContext context) =>
-{
-    await context.SignOutAsync(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme);
-    return Results.Redirect("/");
-});
 
 app.Run();

@@ -4,6 +4,8 @@
 @using LilasBoutique.Data
 @using LilasBoutique.Models
 @using Microsoft.AspNetCore.Authorization
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 @inject IDashboardService DashboardService
 
 <h3 class="fw-bold mb-4">Dashboard y Resumen Gerencial</h3>
@@ -58,6 +60,30 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // Validación de seguridad por rol: Solo el Administrador puede ver el Dashboard
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (!user.IsInRole("Administrador"))
+        {
+            if (user.IsInRole("Vendedor"))
+            {
+                Navigation.NavigateTo("/catalogos");
+                return;
+            }
+            else if (user.IsInRole("Bodeguero"))
+            {
+                Navigation.NavigateTo("/bodega");
+                return;
+            }
+            else
+            {
+                Navigation.NavigateTo("/");
+                return;
+            }
+        }
+
+        // Carga de datos gerenciales si pasa la validación
         ValorTotalInventario = await DashboardService.CalcularValorInventario();
         alertasDesabastecimiento = await DashboardService.ObtenerAlertasStock();
     }

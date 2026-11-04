@@ -1,5 +1,5 @@
-﻿
-using LilasBoutique.Models;
+﻿using LilasBoutique.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace LilasBoutique.Data
 {
@@ -16,17 +16,22 @@ namespace LilasBoutique.Data
 
         public async Task ProcesarMovimiento(MovimientoAuditoria movimiento)
         {
-            var variante = await _context.VariantePrenda.FindAsync(movimiento.VarianteId);
-            if (variante == null) throw new Exception("Variante de prenda no encontrada");
+            // Consultamos la variante sin rastreo para evitar conflictos de adjunción en EF Core
+            var variante = await _context.VariantePrenda
+                .AsNoTracking()
+                .FirstOrDefaultAsync(v => v.IdVariante == movimiento.VarianteId);
 
-            if (movimiento.TipoOperacion == "RECEPCION_PROVEEDOR") //[cite: 2]
+            if (variante == null)
+                throw new Exception("Variante de prenda no encontrada");
+
+            if (movimiento.TipoOperacion == "RECEPCION_PROVEEDOR") 
             {
                 variante.StockFisicoActual += movimiento.CantidadAfectada;
             }
-            else if (movimiento.TipoOperacion == "MERMA_DAÑO") //[cite: 2]
+            else if (movimiento.TipoOperacion == "MERMA_DAÑO") 
             {
                 if (variante.StockFisicoActual < movimiento.CantidadAfectada)
-                    throw new Exception("No se puede descontar más stock del existente (Violación CHK_Stock_Fisico)."); //[cite: 2]
+                    throw new Exception("No se puede descontar más stock del existente (Violación CHK_Stock_Fisico)."); 
 
                 variante.StockFisicoActual -= movimiento.CantidadAfectada;
             }
@@ -35,8 +40,13 @@ namespace LilasBoutique.Data
                 throw new Exception("Tipo de operación no válida.");
             }
 
+            // Marcamos la variante como modificada para que EF Core actualice únicamente el stock
+            _context.Entry(variante).State = EntityState.Modified;
+
+            // Asignamos la fecha y registramos el movimiento de auditoría
             movimiento.FechaHora = DateTime.Now;
             _context.MovimientoAuditoria.Add(movimiento);
+
             await _context.SaveChangesAsync();
         }
     }

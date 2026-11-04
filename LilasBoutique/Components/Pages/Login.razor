@@ -3,14 +3,11 @@
 @layout Layout.LoginLayout
 @using LilasBoutique.DTOs
 @using LilasBoutique.Data
-@using Microsoft.AspNetCore.Antiforgery
-@using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Authentication.Cookies
 @using System.Security.Claims
-@using Microsoft.AspNetCore.Mvc
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject CustomAuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Acceso - Lila's Boutique</PageTitle>
 
@@ -23,7 +20,6 @@
 
         <EditForm Model="loginModel" OnValidSubmit="ValidarLogin" FormName="loginForm">
             <DataAnnotationsValidator />
-            <AntiforgeryToken />
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Correo Electrónico:</label>
@@ -56,51 +52,31 @@
 </div>
 
 @code {
-    // Captura el contexto de la petición web para poder escribir la cookie
-    [CascadingParameter]
-    public HttpContext? HttpContext { get; set; }
-
     [SupplyParameterFromForm]
     public LoginDTO loginModel { get; set; } = new();
 
     private string mensajeError = "";
 
-    [IgnoreAntiforgeryToken]
     private async Task ValidarLogin()
     {
         var usuario = await AuthService.ObtenerUsuarioPorCorreo(loginModel.Correo);
 
         if (usuario != null && usuario.EstadoActivo && BCrypt.Net.BCrypt.Verify(loginModel.Password, usuario.HashCredencial))
         {
-            // 1. Preparamos los datos (Claims) del usuario para la Cookie
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, usuario.IdUsuario.ToString()),
-                new Claim(ClaimTypes.Name, usuario.Correo),
-                new Claim(ClaimTypes.Role, usuario.Rol.NombreRol)
-            };
+            // Actualizamos el estado de autenticación en memoria mediante nuestro proveedor custom
+            await AuthStateProvider.ActualizarEstadoAutenticacion(usuario);
 
-            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            var principal = new ClaimsPrincipal(identity);
-
-            // 2. Escribimos la Cookie encriptada en el navegador del usuario
-            if (HttpContext != null)
-            {
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
-            }
-
-            // 3. Forzamos la recarga (forceLoad: true) para que el servidor lea la nueva Cookie
+            // Redirigimos según el rol del usuario de manera fluida
             if (usuario.Rol.NombreRol == "Administrador")
-                Navigation.NavigateTo("/dashboard", forceLoad: true);
+                Navigation.NavigateTo("/dashboard");
             else if (usuario.Rol.NombreRol == "Vendedor")
-                Navigation.NavigateTo("/catalogos", forceLoad: true);
+                Navigation.NavigateTo("/catalogos");
             else
-                Navigation.NavigateTo("/bodega", forceLoad: true);
+                Navigation.NavigateTo("/bodega");
         }
         else
         {
             mensajeError = "Credenciales incorrectas o usuario inactivo.";
         }
     }
-}   
 }

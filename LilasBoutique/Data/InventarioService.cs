@@ -13,6 +13,8 @@ namespace LilasBoutique.Data
         Task<List<VariantePrenda>> ObtenerCatalogo(string filtroBusqueda = "");
         Task RegistrarVenta(int varianteId, int cantidadVendida, int usuarioId);
         Task RegistrarMovimientoBodega(int varianteId, string tipoOperacion, int cantidad, int usuarioId, string justificacion);
+        Task EliminarVariante(int idVariante);
+        Task ActualizarVariante(VariantePrenda variante);
 
         // Métodos de Creación
         Task AgregarCategoria(Categoria categoria);
@@ -36,20 +38,48 @@ namespace LilasBoutique.Data
 
         public InventarioService(LilaBoutiqueContext context) => _context = context;
 
-        public async Task<List<Categoria>> ObtenerCategorias() => await _context.Categoria.ToListAsync();
-        public async Task<List<Talla>> ObtenerTallas() => await _context.Talla.ToListAsync();
-        public async Task<List<Color>> ObtenerColores() => await _context.Color.ToListAsync();
+        // Se agrega AsNoTracking() para evitar el bloqueo en memoria que causaba el error de asociación al vender o editar.
+        public async Task<List<Categoria>> ObtenerCategorias() => await _context.Categoria.AsNoTracking().ToListAsync();
+        public async Task<List<Talla>> ObtenerTallas() => await _context.Talla.AsNoTracking().ToListAsync();
+        public async Task<List<Color>> ObtenerColores() => await _context.Color.AsNoTracking().ToListAsync();
 
         public async Task GuardarPrendaCompleta(Prenda prenda, List<VariantePrenda> variantes)
         {
+            // Limpiamos la navegación para que EF Core no intente insertar colores o tallas duplicadas
+            foreach (var v in variantes)
+            {
+                v.Talla = null!;
+                v.Color = null!;
+                v.Prenda = null!;
+            }
+
             prenda.Variantes = variantes;
             _context.Prenda.Add(prenda);
+            await _context.SaveChangesAsync();
+
+            // Generamos auditoría automática si el usuario registró stock inicial desde "Registrar Prenda"
+            foreach (var v in prenda.Variantes)
+            {
+                if (v.StockFisicoActual > 0)
+                {
+                    _context.MovimientoAuditoria.Add(new MovimientoAuditoria
+                    {
+                        VarianteId = v.IdVariante,
+                        UsuarioId = 1, // ID temporal, puedes cambiarlo por el usuario en sesión
+                        CantidadAfectada = v.StockFisicoActual,
+                        TipoOperacion = "RECEPCION_PROVEEDOR",
+                        Justificacion = "Stock inicial ingresado al crear la prenda",
+                        FechaHora = DateTime.Now
+                    });
+                }
+            }
             await _context.SaveChangesAsync();
         }
 
         public async Task<List<VariantePrenda>> ObtenerCatalogo(string filtroBusqueda = "")
         {
             var query = _context.VariantePrenda
+                .AsNoTracking() // Libera los datos de la memoria para que no haya conflictos de llave foránea
                 .Include(v => v.Prenda).ThenInclude(p => p.Categoria)
                 .Include(v => v.Talla)
                 .Include(v => v.Color)
@@ -81,10 +111,52 @@ namespace LilasBoutique.Data
                 UsuarioId = usuarioId,
                 CantidadAfectada = cantidadVendida,
                 TipoOperacion = "VENTA_CLIENTE",
+                Justificacion = "Venta desde catálogo",
                 FechaHora = DateTime.Now
             };
 
             _context.MovimientoAuditoria.Add(movimiento);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task EliminarVariante(int idVariante)
+        {
+            var variante = await _context.VariantePrenda.FindAsync(idVariante);
+            if (variante != null)
+            {
+                // Soluciona el error de "Esta prenda ya tiene historial" eliminando primero los movimientos asociados en la BD
+                var movimientosAsociados = await _context.MovimientoAuditoria.Where(m => m.VarianteId == idVariante).ToListAsync();
+                if (movimientosAsociados.Any())
+                {
+                    _context.MovimientoAuditoria.RemoveRange(movimientosAsociados);
+                }
+
+                _context.VariantePrenda.Remove(variante);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task ActualizarVariante(VariantePrenda varianteModificada)
+        {
+            // 1. Buscamos la variante existente incluyendo su Prenda en la base de datos
+            var varianteDb = await _context.VariantePrenda
+                .Include(v => v.Prenda)
+                .FirstOrDefaultAsync(v => v.IdVariante == varianteModificada.IdVariante);
+
+            if (varianteDb == null)
+                throw new Exception("Variante no encontrada.");
+
+            // 2. Actualizamos el precio de la variante
+            varianteDb.Precio = varianteModificada.Precio;
+
+            // 3. Si la prenda existe y se modificó la marca, la actualizamos también
+            if (varianteDb.Prenda != null && varianteModificada.Prenda != null)
+            {
+                varianteDb.Prenda.Marca = varianteModificada.Prenda.Marca;
+                _context.Entry(varianteDb.Prenda).State = EntityState.Modified;
+            }
+
+            _context.Entry(varianteDb).State = EntityState.Modified;
             await _context.SaveChangesAsync();
         }
 
@@ -131,9 +203,21 @@ namespace LilasBoutique.Data
             await _context.SaveChangesAsync();
         }
 
-        public async Task AgregarTalla(Talla talla)
+        public async Task AgregarTalla(Talla nuevaTalla)
         {
-            _context.Talla.Add(talla);
+            // 1. Verificamos si ya existe la misma talla DENTRO de la misma categoría
+            bool existeTalla = await _context.Talla.AnyAsync(t =>
+                t.CategoriaId == nuevaTalla.CategoriaId &&
+                t.NombreTalla.ToLower() == nuevaTalla.NombreTalla.ToLower());
+
+            if (existeTalla)
+            {
+                // Si existe, lanzamos un error que será capturado por el bloque try-catch de Parametros.razor
+                throw new Exception($"La talla '{nuevaTalla.NombreTalla}' ya está registrada en esta categoría.");
+            }
+
+            // 2. Si no existe, procedemos a guardarla normalmente
+            _context.Talla.Add(nuevaTalla);
             await _context.SaveChangesAsync();
         }
 
@@ -173,15 +257,25 @@ namespace LilasBoutique.Data
             }
         }
 
-        public async Task ActualizarTalla(Talla talla)
+        public async Task ActualizarTalla(Talla tallaModificada)
         {
-            var existente = await _context.Talla.FindAsync(talla.IdTalla);
-            if (existente != null)
+            // 1. Verificamos duplicados, asegurándonos de ignorar el ID de la talla que estamos editando
+            bool existeTalla = await _context.Talla.AnyAsync(t =>
+                t.CategoriaId == tallaModificada.CategoriaId &&
+                t.NombreTalla.ToLower() == tallaModificada.NombreTalla.ToLower() &&
+                t.IdTalla != tallaModificada.IdTalla);
+
+            if (existeTalla)
             {
-                existente.NombreTalla = talla.NombreTalla;
-                existente.CategoriaId = talla.CategoriaId;
-                await _context.SaveChangesAsync();
+                throw new Exception($"La talla '{tallaModificada.NombreTalla}' ya está registrada en esta categoría.");
             }
+
+            // 2. Actualizamos usando ExecuteUpdateAsync para mayor rendimiento y evitar contaminación de caché
+            await _context.Talla
+                .Where(t => t.IdTalla == tallaModificada.IdTalla)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(t => t.NombreTalla, tallaModificada.NombreTalla)
+                    .SetProperty(t => t.CategoriaId, tallaModificada.CategoriaId));
         }
 
         public async Task ActualizarColor(Color color)

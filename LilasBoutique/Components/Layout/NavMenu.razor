@@ -1,4 +1,5 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using LilasBoutique.Data
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="dashboard">Lila's Boutique</a>
     </div>
@@ -13,13 +14,14 @@
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="dashboard" Match="NavLinkMatch.All">
-                        <span class="bi bi-graph-up-arrow-fill" aria-hidden="true"></span> Dashboard
+                        <span class="bi bi-speedometer2" aria-hidden="true"></span> Dashboard
                     </NavLink>
                 </div>
             </Authorized>
         </AuthorizeView>
 
-        <AuthorizeView Roles="Administrador, Vendedor">
+        <!-- Se añade Bodeguero para que pueda ver el acceso al catálogo -->
+        <AuthorizeView Roles="Administrador, Vendedor, Bodeguero">
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="catalogos">
@@ -46,7 +48,6 @@
                         <span class="bi bi-tags-fill" aria-hidden="true"></span> Registrar Prenda
                     </NavLink>
                 </div>
-                <!-- NUEVO ENLACE DE PARÁMETROS AQUÍ -->
                 <div class="nav-item px-3">
                     <a class="nav-link" href="parametros" data-enhance-nav="false">
                         <span class="bi bi-gear-fill" aria-hidden="true"></span> Atributos (Cat, Tal, Col)
@@ -68,15 +69,26 @@
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
-                    <form action="logout" method="post">
-                        <AntiforgeryToken />
-                        <button type="submit" class="nav-link btn btn-link w-100 text-start">
-                            <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Cerrar Sesión
-                        </button>
-                    </form>
+                    <button type="button" class="nav-link btn btn-link w-100 text-start text-white" @onclick="CerrarSesion">
+                        <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Cerrar Sesión
+                    </button>
                 </div>
             </Authorized>
         </AuthorizeView>
 
     </nav>
 </div>
+
+@code {
+    [Inject]
+    private CustomAuthenticationStateProvider AuthStateProvider { get; set; } = default!;
+
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+
+    private async Task CerrarSesion()
+    {
+        await AuthStateProvider.ActualizarEstadoAutenticacion(null);
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+}

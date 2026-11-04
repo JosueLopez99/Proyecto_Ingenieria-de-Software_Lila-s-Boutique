@@ -37,6 +37,8 @@
                 <table class="table table-hover align-middle text-center">
                     <thead class="table-light">
                         <tr>
+                            <!-- NUEVA COLUMNA: CÓDIGO -->
+                            <th class="text-start">Código</th>
                             <th class="text-start">Marca</th>
                             <th>Categoría</th>
                             <th>Talla</th>
@@ -50,7 +52,7 @@
                         @if (cargando)
                         {
                             <tr>
-                                <td colspan="7" class="text-center py-5">
+                                <td colspan="8" class="text-center py-5">
                                     <div class="spinner-border text-primary" role="status"></div>
                                     <div class="mt-2 text-muted">Cargando catálogo...</div>
                                 </td>
@@ -58,13 +60,17 @@
                         }
                         else if (!catalogoFiltrado.Any())
                         {
-                            <tr><td colspan="7" class="text-muted py-4">No se encontraron prendas en el catálogo.</td></tr>
+                            <tr><td colspan="8" class="text-muted py-4">No se encontraron prendas en el catálogo.</td></tr>
                         }
                         else
                         {
                             @foreach (var item in catalogoFiltrado)
                             {
                                 <tr @key="item.IdVariante">
+                                    <!-- MOSTRAR EL CÓDIGO -->
+                                    <td class="text-start fw-bold text-secondary">
+                                        <i class="bi bi-upc-scan me-1"></i>@(item.Prenda?.CodigoIdentificador ?? "N/A")
+                                    </td>
                                     <td class="text-start fw-semibold text-dark">@(item.Prenda?.Marca ?? "Sin Marca")</td>
                                     <td><span class="badge bg-light text-dark border">@(item.Prenda?.Categoria?.NombreCategoria ?? "Sin Categoría")</span></td>
                                     <td>@(item.Talla?.NombreTalla ?? "-")</td>
@@ -123,10 +129,13 @@
                     <button type="button" class="btn-close btn-close-white" @onclick="CerrarModales"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-2"><strong>Prenda:</strong> @varianteSeleccionada?.Prenda?.Marca - @varianteSeleccionada?.Prenda?.Categoria?.NombreCategoria</p>
-                    <p class="mb-4"><strong>Talla:</strong> @varianteSeleccionada?.Talla?.NombreTalla | <strong>Color:</strong> @varianteSeleccionada?.Color?.NombreColor</p>
+                    <div class="bg-light p-3 rounded mb-3 border">
+                        <p class="mb-1"><strong class="text-primary">Código:</strong> @varianteSeleccionada?.Prenda?.CodigoIdentificador</p>
+                        <p class="mb-0"><strong>Prenda:</strong> @varianteSeleccionada?.Prenda?.Marca - @varianteSeleccionada?.Prenda?.Categoria?.NombreCategoria</p>
+                    </div>
+                    <p class="mb-4 text-center"><strong>Talla:</strong> @varianteSeleccionada?.Talla?.NombreTalla | <strong>Color:</strong> @varianteSeleccionada?.Color?.NombreColor</p>
 
-                    <div class="alert alert-info py-2">
+                    <div class="alert alert-info py-2 text-center">
                         <i class="bi bi-box-seam me-2"></i>Stock Disponible: <strong>@varianteSeleccionada?.StockFisicoActual unidades</strong>
                     </div>
 
@@ -142,7 +151,7 @@
     </div>
 }
 
-<!-- ================= MODAL DE EDICIÓN (MARCA Y PRECIO) ================= -->
+<!-- ================= MODAL DE EDICIÓN ================= -->
 @if (esAdministrador && mostrarModalEdicion)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
@@ -154,12 +163,16 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
+                        <label class="form-label fw-bold">Código Identificador:</label>
+                        <input type="text" @bind="varianteSeleccionada!.Prenda!.CodigoIdentificador" class="form-control" />
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label fw-bold">Marca de la Prenda:</label>
-                        <input type="text" @bind="varianteSeleccionada!.Prenda!.Marca" class="form-control form-control-lg" placeholder="Ingrese la marca..." />
+                        <input type="text" @bind="varianteSeleccionada!.Prenda!.Marca" class="form-control" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Nuevo Precio de Venta (C$):</label>
-                        <input type="number" @bind="varianteSeleccionada!.Precio" class="form-control form-control-lg" min="0" step="any" />
+                        <input type="number" @bind="varianteSeleccionada!.Precio" class="form-control form-control-lg text-success fw-bold" min="0" step="any" />
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
@@ -227,7 +240,6 @@
         if (user.Identity != null && user.Identity.IsAuthenticated)
         {
             esAdministrador = user.IsInRole("Administrador");
-            // Solo Administrador y Vendedor pueden ver el botón de procesar ventas
             puedeVender = user.IsInRole("Administrador") || user.IsInRole("Vendedor");
         }
     }
@@ -264,6 +276,7 @@
         {
             var b = TextoBusqueda.ToLower();
             catalogoFiltrado = catalogoCompleto.Where(v => v != null && (
+                (v.Prenda?.CodigoIdentificador?.ToLower().Contains(b) ?? false) || // Búsqueda por código habilitada
                 (v.Prenda?.Marca?.ToLower().Contains(b) ?? false) ||
                 (v.Prenda?.Categoria?.NombreCategoria?.ToLower().Contains(b) ?? false) ||
                 (v.Talla?.NombreTalla?.ToLower().Contains(b) ?? false) ||
@@ -290,15 +303,13 @@
         if (cantidadVenta <= 0)
         {
             MostrarMensaje("Debe ingresar una cantidad válida mayor a 0.", true);
-            CerrarModales();
-            return;
+            CerrarModales(); return;
         }
 
         if (cantidadVenta > varianteSeleccionada.StockFisicoActual)
         {
             MostrarMensaje($"Error: Solo hay {varianteSeleccionada.StockFisicoActual} unidades en stock.", true);
-            CerrarModales();
-            return;
+            CerrarModales(); return;
         }
 
         try
@@ -327,6 +338,7 @@
             Prenda = new Prenda
             {
                 IdPrenda = variante.Prenda?.IdPrenda ?? 0,
+                CodigoIdentificador = variante.Prenda?.CodigoIdentificador ?? "", // Cargamos el código para edición
                 Marca = variante.Prenda?.Marca ?? "",
                 CategoriaId = variante.Prenda?.CategoriaId ?? 0
             }

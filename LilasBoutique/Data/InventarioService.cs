@@ -43,36 +43,48 @@ namespace LilasBoutique.Data
         public async Task<List<Talla>> ObtenerTallas() => await _context.Talla.AsNoTracking().ToListAsync();
         public async Task<List<Color>> ObtenerColores() => await _context.Color.AsNoTracking().ToListAsync();
 
-        public async Task GuardarPrendaCompleta(Prenda prenda, List<VariantePrenda> variantes)
+        public async Task GuardarPrendaCompleta(Prenda nuevaPrenda, List<VariantePrenda> variantes)
         {
-            // Limpiamos la navegación para que EF Core no intente insertar colores o tallas duplicadas
-            foreach (var v in variantes)
+            // 1. Verificar que el código identificador no exista ya
+            bool codigoExiste = await _context.Prenda
+                .AnyAsync(p => p.CodigoIdentificador.ToLower() == nuevaPrenda.CodigoIdentificador.ToLower());
+
+            if (codigoExiste)
             {
-                v.Talla = null!;
-                v.Color = null!;
-                v.Prenda = null!;
+                throw new Exception($"El código identificador '{nuevaPrenda.CodigoIdentificador}' ya está en uso por otra prenda.");
             }
 
-            prenda.Variantes = variantes;
-            _context.Prenda.Add(prenda);
-            await _context.SaveChangesAsync();
-
-            // Generamos auditoría automática si el usuario registró stock inicial desde "Registrar Prenda"
-            foreach (var v in prenda.Variantes)
+            // 2. NUEVA VALIDACIÓN: Bloqueo de clones físicos exactos
+            foreach (var varianteTemporal in variantes)
             {
-                if (v.StockFisicoActual > 0)
+                bool clonExiste = await _context.VariantePrenda
+                    .Include(vp => vp.Prenda)
+                    .AnyAsync(vp =>
+                        vp.Prenda.CategoriaId == nuevaPrenda.CategoriaId &&
+                        vp.Prenda.Marca.ToLower() == nuevaPrenda.Marca.ToLower() &&
+                        vp.TallaId == varianteTemporal.TallaId &&
+                        vp.ColorId == varianteTemporal.ColorId);
+
+                if (clonExiste)
                 {
-                    _context.MovimientoAuditoria.Add(new MovimientoAuditoria
-                    {
-                        VarianteId = v.IdVariante,
-                        UsuarioId = 1, // ID temporal, puedes cambiarlo por el usuario en sesión
-                        CantidadAfectada = v.StockFisicoActual,
-                        TipoOperacion = "RECEPCION_PROVEEDOR",
-                        Justificacion = "Stock inicial ingresado al crear la prenda",
-                        FechaHora = DateTime.Now
-                    });
+                    // Extraemos los nombres reales de la BD para dar un error específico y entendible
+                    var nombreTalla = await _context.Talla.Where(t => t.IdTalla == varianteTemporal.TallaId).Select(t => t.NombreTalla).FirstOrDefaultAsync();
+                    var nombreColor = await _context.Color.Where(c => c.IdColor == varianteTemporal.ColorId).Select(c => c.NombreColor).FirstOrDefaultAsync();
+
+                    throw new Exception($"Registro bloqueado: Ya existe una prenda '{nuevaPrenda.Marca}' en talla '{nombreTalla}' y color '{nombreColor}' en el catálogo. No se permiten registros duplicados.");
                 }
             }
+
+            // 3. Proceso original de guardado si pasa todas las pruebas
+            _context.Prenda.Add(nuevaPrenda);
+            await _context.SaveChangesAsync();
+
+            foreach (var variante in variantes)
+            {
+                variante.PrendaId = nuevaPrenda.IdPrenda;
+                _context.VariantePrenda.Add(variante);
+            }
+
             await _context.SaveChangesAsync();
         }
 
@@ -138,26 +150,74 @@ namespace LilasBoutique.Data
 
         public async Task ActualizarVariante(VariantePrenda varianteModificada)
         {
-            // 1. Buscamos la variante existente incluyendo su Prenda en la base de datos
-            var varianteDb = await _context.VariantePrenda
+            // 1. Obtenemos la variante original y su ficha maestra (Prenda) para analizar la situación
+            var varianteOriginal = await _context.VariantePrenda
                 .Include(v => v.Prenda)
+                .ThenInclude(p => p.Variantes) // Cargamos las variantes hermanas
                 .FirstOrDefaultAsync(v => v.IdVariante == varianteModificada.IdVariante);
 
-            if (varianteDb == null)
-                throw new Exception("Variante no encontrada.");
+            if (varianteOriginal == null) throw new Exception("La variante no fue encontrada.");
 
-            // 2. Actualizamos el precio de la variante
-            varianteDb.Precio = varianteModificada.Precio;
+            // Detectamos si el usuario realmente cambió el código o la marca en el modal
+            bool huboCambioMaestro = varianteOriginal.Prenda.CodigoIdentificador.ToLower() != varianteModificada.Prenda.CodigoIdentificador.ToLower() ||
+                                     varianteOriginal.Prenda.Marca.ToLower() != varianteModificada.Prenda.Marca.ToLower();
 
-            // 3. Si la prenda existe y se modificó la marca, la actualizamos también
-            if (varianteDb.Prenda != null && varianteModificada.Prenda != null)
+            // 2. Validación: Que el nuevo código no esté ocupado por OTRA prenda activa distinta
+            if (huboCambioMaestro)
             {
-                varianteDb.Prenda.Marca = varianteModificada.Prenda.Marca;
-                _context.Entry(varianteDb.Prenda).State = EntityState.Modified;
+                bool codigoOcupado = await _context.Prenda
+                    .Where(p => p.CodigoIdentificador.ToLower() == varianteModificada.Prenda.CodigoIdentificador.ToLower()
+                             && p.IdPrenda != varianteOriginal.PrendaId)
+                    .AnyAsync(p => p.Variantes.Any());
+
+                if (codigoOcupado) throw new Exception($"El código '{varianteModificada.Prenda.CodigoIdentificador}' ya pertenece a otra prenda activa en el catálogo.");
             }
 
-            _context.Entry(varianteDb).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            int cantidadVariantesAsociadas = varianteOriginal.Prenda.Variantes.Count;
+
+            // =========================================================
+            // 3. ESTRATEGIA DE SEPARACIÓN (SPLIT)
+            // =========================================================
+            // Si hay un cambio en el código o marca, Y la prenda maestra tiene más de 1 variante (hermanas compartiendo código)...
+            if (huboCambioMaestro && cantidadVariantesAsociadas > 1)
+            {
+                // Creamos una nueva Ficha Maestra independiente para aislar esta variante
+                var nuevaPrenda = new Prenda
+                {
+                    CodigoIdentificador = varianteModificada.Prenda.CodigoIdentificador,
+                    Marca = varianteModificada.Prenda.Marca,
+                    CategoriaId = varianteOriginal.Prenda.CategoriaId,
+                    DescripcionBreve = varianteOriginal.Prenda.DescripcionBreve
+                };
+
+                _context.Prenda.Add(nuevaPrenda);
+                await _context.SaveChangesAsync(); // Guardamos para que SQL genere el nuevo IdPrenda
+
+                // Movemos esta variante específica a la nueva Prenda y actualizamos su precio
+                await _context.VariantePrenda
+                    .Where(v => v.IdVariante == varianteModificada.IdVariante)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(v => v.PrendaId, nuevaPrenda.IdPrenda)
+                        .SetProperty(v => v.Precio, varianteModificada.Precio));
+            }
+            else
+            {
+                // Si es "hija única", O si NO hubo cambio de código/marca (es decir, solo le cambiaron el precio)
+                await _context.VariantePrenda
+                    .Where(v => v.IdVariante == varianteModificada.IdVariante)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(v => v.Precio, varianteModificada.Precio));
+
+                // Si fue hija única y le cambiaron el código, actualizamos a la madre directamente porque no afecta a nadie más
+                if (huboCambioMaestro)
+                {
+                    await _context.Prenda
+                        .Where(p => p.IdPrenda == varianteOriginal.PrendaId)
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(p => p.CodigoIdentificador, varianteModificada.Prenda.CodigoIdentificador)
+                            .SetProperty(p => p.Marca, varianteModificada.Prenda.Marca));
+                }
+            }
         }
 
         public async Task RegistrarMovimientoBodega(int varianteId, string tipoOperacion, int cantidad, int usuarioId, string justificacion)

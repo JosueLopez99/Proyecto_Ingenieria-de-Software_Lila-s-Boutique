@@ -1,23 +1,25 @@
 ﻿@page "/parametros"
-@attribute [Authorize]
 @rendermode InteractiveServer
 @using LilasBoutique.Models
 @using LilasBoutique.Data
+@using Microsoft.AspNetCore.Authorization
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 @inject IInventarioService InventarioService
 
 <h3 class="fw-bold mb-4">Gestión de Atributos de Prenda</h3>
 
 @if (!string.IsNullOrEmpty(mensajeNotificacion))
 {
-    <div class="alert @(esError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+    <div class="alert @(esError ? "alert-danger" : "alert-success") alert-dismissible fade show shadow-sm" role="alert">
         <i class="bi @(esError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill") me-2"></i>
         @mensajeNotificacion
         <button type="button" class="btn-close" @onclick="() => mensajeNotificacion = string.Empty"></button>
     </div>
 }
 
-<div class="row g-4">
-    <!-- Panel de Categorías -->
+<div class="row g-4 align-items-start">
+    <!-- ================= PANEL DE CATEGORÍAS ================= -->
     <div class="col-md-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-primary text-white fw-bold">
@@ -25,11 +27,11 @@
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label class="form-label small">Nombre de Categoría</label>
+                    <label class="form-label small text-secondary fw-semibold">Nombre de Categoría</label>
                     <InputText @bind-Value="nuevaCategoria.NombreCategoria" class="form-control" placeholder="Ej: Camisas" />
                 </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-primary w-100" @onclick="GuardarCategoria">
+                <div class="d-flex gap-2 mb-4">
+                    <button class="btn btn-primary w-100 fw-bold" @onclick="GuardarCategoria">
                         @(nuevaCategoria.IdCategoria == 0 ? "Guardar" : "Actualizar") Categoría
                     </button>
                     @if (nuevaCategoria.IdCategoria != 0)
@@ -38,18 +40,17 @@
                     }
                 </div>
 
-                <hr class="my-4" />
-                <h6 class="fw-bold text-secondary">Registradas:</h6>
+                <h6 class="fw-bold text-secondary border-bottom pb-2 mb-3">Registradas:</h6>
                 <ul class="list-group list-group-flush small">
                     @foreach (var cat in categorias)
                     {
-                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                            @cat.NombreCategoria
+                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center border-bottom-0">
+                            <span class="fw-semibold">@cat.NombreCategoria</span>
                             <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-primary border-0" @onclick="() => EditarCategoria(cat)">
+                                <button type="button" class="btn btn-sm btn-outline-primary border-0" title="Editar" @onclick="() => EditarCategoria(cat)">
                                     <i class="bi bi-pencil-fill"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger border-0" @onclick="() => BorrarCategoria(cat.IdCategoria)">
+                                <button type="button" class="btn btn-sm btn-outline-danger border-0" title="Eliminar" @onclick="() => BorrarCategoria(cat.IdCategoria)">
                                     <i class="bi bi-trash-fill"></i>
                                 </button>
                             </div>
@@ -60,7 +61,7 @@
         </div>
     </div>
 
-    <!-- Panel de Tallas -->
+    <!-- ================= PANEL DE TALLAS ORGANIZADAS ================= -->
     <div class="col-md-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-success text-white fw-bold">
@@ -68,7 +69,7 @@
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label class="form-label small">Categoría Perteneciente</label>
+                    <label class="form-label small text-secondary fw-semibold">Categoría Perteneciente</label>
                     <InputSelect @bind-Value="nuevaTalla.CategoriaId" class="form-select">
                         <option value="0">Seleccione...</option>
                         @foreach (var cat in categorias)
@@ -78,11 +79,11 @@
                     </InputSelect>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small">Nombre de Talla</label>
+                    <label class="form-label small text-secondary fw-semibold">Nombre de Talla</label>
                     <InputText @bind-Value="nuevaTalla.NombreTalla" class="form-control" placeholder="Ej: S, M, L o 32" />
                 </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-success w-100" @onclick="GuardarTalla">
+                <div class="d-flex gap-2 mb-4">
+                    <button class="btn btn-success w-100 fw-bold" @onclick="GuardarTalla">
                         @(nuevaTalla.IdTalla == 0 ? "Guardar" : "Actualizar") Talla
                     </button>
                     @if (nuevaTalla.IdTalla != 0)
@@ -91,29 +92,52 @@
                     }
                 </div>
 
-                <hr class="my-4" />
-                <h6 class="fw-bold text-secondary">Registradas:</h6>
-                <ul class="list-group list-group-flush small">
-                    @foreach (var talla in tallas)
+                <h6 class="fw-bold text-secondary border-bottom pb-2 mb-3">Tallas por Categoría:</h6>
+
+                @* Lógica de agrupación por categorías *@
+                <div class="accordion-container" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
+                    @foreach (var cat in categorias)
                     {
-                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                            @talla.NombreTalla
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-success border-0" @onclick="() => EditarTalla(talla)">
-                                    <i class="bi bi-pencil-fill"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger border-0" @onclick="() => BorrarTalla(talla.IdTalla)">
-                                    <i class="bi bi-trash-fill"></i>
-                                </button>
+                        var tallasDeEstaCategoria = tallas.Where(t => t.CategoriaId == cat.IdCategoria).ToList();
+
+                        <div class="mb-3 border rounded shadow-sm bg-light">
+                            <div class="bg-white border-bottom px-3 py-2 rounded-top d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-success"><i class="bi bi-tag-fill me-2"></i>@cat.NombreCategoria</span>
+                                <span class="badge bg-secondary rounded-pill">@tallasDeEstaCategoria.Count</span>
                             </div>
-                        </li>
+                            <div class="p-2">
+                                @if (!tallasDeEstaCategoria.Any())
+                                {
+                                    <div class="text-muted small fst-italic text-center py-2">Sin tallas registradas</div>
+                                }
+                                else
+                                {
+                                    <ul class="list-group list-group-flush small">
+                                        @foreach (var talla in tallasDeEstaCategoria)
+                                        {
+                                            <li class="list-group-item px-2 py-1 bg-transparent d-flex justify-content-between align-items-center">
+                                                <span class="fw-semibold text-dark">@talla.NombreTalla</span>
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-sm text-primary p-0 me-2" title="Editar" @onclick="() => EditarTalla(talla)">
+                                                        <i class="bi bi-pencil-fill"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm text-danger p-0" title="Eliminar" @onclick="() => BorrarTalla(talla.IdTalla)">
+                                                        <i class="bi bi-trash-fill"></i>
+                                                    </button>
+                                                </div>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                            </div>
+                        </div>
                     }
-                </ul>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Panel de Colores -->
+    <!-- ================= PANEL DE COLORES ================= -->
     <div class="col-md-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-warning text-dark fw-bold">
@@ -121,10 +145,10 @@
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label class="form-label small">Nombre del Color</label>
+                    <label class="form-label small text-secondary fw-semibold">Nombre del Color</label>
                     <InputText @bind-Value="nuevoColor.NombreColor" class="form-control" placeholder="Ej: Azul Marino" />
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 mb-4">
                     <button class="btn btn-warning w-100 fw-bold" @onclick="GuardarColor">
                         @(nuevoColor.IdColor == 0 ? "Guardar" : "Actualizar") Color
                     </button>
@@ -134,18 +158,17 @@
                     }
                 </div>
 
-                <hr class="my-4" />
-                <h6 class="fw-bold text-secondary">Registrados:</h6>
+                <h6 class="fw-bold text-secondary border-bottom pb-2 mb-3">Registrados:</h6>
                 <ul class="list-group list-group-flush small">
                     @foreach (var color in colores)
                     {
-                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                            @color.NombreColor
+                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center border-bottom-0">
+                            <span class="fw-semibold">@color.NombreColor</span>
                             <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-warning border-0" @onclick="() => EditarColor(color)">
+                                <button type="button" class="btn btn-sm btn-outline-warning border-0" title="Editar" @onclick="() => EditarColor(color)">
                                     <i class="bi bi-pencil-fill"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger border-0" @onclick="() => BorrarColor(color.IdColor)">
+                                <button type="button" class="btn btn-sm btn-outline-danger border-0" title="Eliminar" @onclick="() => BorrarColor(color.IdColor)">
                                     <i class="bi bi-trash-fill"></i>
                                 </button>
                             </div>
@@ -171,6 +194,29 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Validación de seguridad por rol: Solo Administrador
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (!user.IsInRole("Administrador"))
+        {
+            if (user.IsInRole("Vendedor"))
+            {
+                Navigation.NavigateTo("/catalogos");
+                return;
+            }
+            else if (user.IsInRole("Bodeguero"))
+            {
+                Navigation.NavigateTo("/bodega");
+                return;
+            }
+            else
+            {
+                Navigation.NavigateTo("/");
+                return;
+            }
+        }
+
         try
         {
             await CargarListas();
@@ -209,69 +255,90 @@
     {
         if (string.IsNullOrWhiteSpace(nuevaCategoria.NombreCategoria))
         {
-            mensajeNotificacion = "Por favor, escribe un nombre para la Categoría."; esError = true; return;
+            MostrarMensaje("Por favor, escribe un nombre para la Categoría.", true);
+            return;
         }
 
-        if (nuevaCategoria.IdCategoria == 0)
+        try
         {
-            await InventarioService.AgregarCategoria(nuevaCategoria);
-            mensajeNotificacion = "¡Categoría guardada exitosamente!";
-        }
-        else
-        {
-            await InventarioService.ActualizarCategoria(nuevaCategoria);
-            mensajeNotificacion = "¡Categoría actualizada exitosamente!";
-        }
+            if (nuevaCategoria.IdCategoria == 0)
+            {
+                await InventarioService.AgregarCategoria(nuevaCategoria);
+                MostrarMensaje("¡Categoría guardada exitosamente!", false);
+            }
+            else
+            {
+                await InventarioService.ActualizarCategoria(nuevaCategoria);
+                MostrarMensaje("¡Categoría actualizada exitosamente!", false);
+            }
 
-        nuevaCategoria = new Categoria();
-        esError = false;
-        await CargarListas();
+            nuevaCategoria = new Categoria();
+            await CargarListas();
+        }
+        catch (Exception ex)
+        {
+            MostrarMensaje($"Error al guardar categoría: {ex.Message}", true);
+        }
     }
 
     private async Task GuardarTalla()
     {
         if (nuevaTalla.CategoriaId == 0 || string.IsNullOrWhiteSpace(nuevaTalla.NombreTalla))
         {
-            mensajeNotificacion = "Por favor, selecciona una categoría y escribe un nombre para la Talla."; esError = true; return;
+            MostrarMensaje("Por favor, selecciona una categoría y escribe un nombre para la Talla.", true);
+            return;
         }
 
-        if (nuevaTalla.IdTalla == 0)
+        try
         {
-            await InventarioService.AgregarTalla(nuevaTalla);
-            mensajeNotificacion = "¡Talla guardada exitosamente!";
-        }
-        else
-        {
-            await InventarioService.ActualizarTalla(nuevaTalla);
-            mensajeNotificacion = "¡Talla actualizada exitosamente!";
-        }
+            if (nuevaTalla.IdTalla == 0)
+            {
+                await InventarioService.AgregarTalla(nuevaTalla);
+                MostrarMensaje("¡Talla guardada exitosamente!", false);
+            }
+            else
+            {
+                await InventarioService.ActualizarTalla(nuevaTalla);
+                MostrarMensaje("¡Talla actualizada exitosamente!", false);
+            }
 
-        nuevaTalla = new Talla();
-        esError = false;
-        await CargarListas();
+            nuevaTalla = new Talla();
+            await CargarListas();
+        }
+        catch (Exception ex)
+        {
+            MostrarMensaje($"Error al guardar talla: {ex.Message}", true);
+        }
     }
 
     private async Task GuardarColor()
     {
         if (string.IsNullOrWhiteSpace(nuevoColor.NombreColor))
         {
-            mensajeNotificacion = "Por favor, escribe un nombre para el Color."; esError = true; return;
+            MostrarMensaje("Por favor, escribe un nombre para el Color.", true);
+            return;
         }
 
-        if (nuevoColor.IdColor == 0)
+        try
         {
-            await InventarioService.AgregarColor(nuevoColor);
-            mensajeNotificacion = "¡Color guardado exitosamente!";
-        }
-        else
-        {
-            await InventarioService.ActualizarColor(nuevoColor);
-            mensajeNotificacion = "¡Color actualizado exitosamente!";
-        }
+            if (nuevoColor.IdColor == 0)
+            {
+                await InventarioService.AgregarColor(nuevoColor);
+                MostrarMensaje("¡Color guardado exitosamente!", false);
+            }
+            else
+            {
+                await InventarioService.ActualizarColor(nuevoColor);
+                MostrarMensaje("¡Color actualizado exitosamente!", false);
+            }
 
-        nuevoColor = new Color();
-        esError = false;
-        await CargarListas();
+            nuevoColor = new Color();
+            await CargarListas();
+        }
+        catch (Exception ex)
+        {
+            MostrarMensaje($"Error al guardar color: {ex.Message}", true);
+        }
     }
 
     // --- MÉTODOS DE BORRADO ---
@@ -281,11 +348,11 @@
         {
             await InventarioService.EliminarCategoria(id);
             await CargarListas();
-            mensajeNotificacion = "Categoría eliminada correctamente."; esError = false;
+            MostrarMensaje("Categoría eliminada correctamente.", false);
         }
         catch (Exception)
         {
-            mensajeNotificacion = "No se puede eliminar: Esta categoría ya está siendo usada."; esError = true;
+            MostrarMensaje("No se puede eliminar: Esta categoría ya está siendo usada o tiene tallas vinculadas.", true);
         }
     }
 
@@ -295,11 +362,11 @@
         {
             await InventarioService.EliminarTalla(id);
             await CargarListas();
-            mensajeNotificacion = "Talla eliminada correctamente."; esError = false;
+            MostrarMensaje("Talla eliminada correctamente.", false);
         }
         catch (Exception)
         {
-            mensajeNotificacion = "No se puede eliminar: Esta talla ya está asignada a una variante."; esError = true;
+            MostrarMensaje("No se puede eliminar: Esta talla ya está asignada a una prenda en el inventario.", true);
         }
     }
 
@@ -309,11 +376,17 @@
         {
             await InventarioService.EliminarColor(id);
             await CargarListas();
-            mensajeNotificacion = "Color eliminado correctamente."; esError = false;
+            MostrarMensaje("Color eliminado correctamente.", false);
         }
         catch (Exception)
         {
-            mensajeNotificacion = "No se puede eliminar: Este color ya está asignado a una variante."; esError = true;
+            MostrarMensaje("No se puede eliminar: Este color ya está asignado a una prenda en el inventario.", true);
         }
+    }
+
+    private void MostrarMensaje(string mensaje, bool error)
+    {
+        mensajeNotificacion = mensaje;
+        esError = error;
     }
 }

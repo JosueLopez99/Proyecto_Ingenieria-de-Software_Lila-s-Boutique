@@ -1,14 +1,27 @@
 ﻿@page "/usuarios"
 @rendermode InteractiveServer
-@attribute [Authorize]
 @using LilasBoutique.Models
 @using LilasBoutique.Data
 @using Microsoft.AspNetCore.Authorization
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 @inject IUsuarioService UsuarioService
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 class="fw-bold mb-0">Gestión de Accesos (RBAC)</h3>
+    <button class="btn btn-primary fw-bold shadow-sm" @onclick="AbrirModalNuevoUsuario">
+        <i class="bi bi-person-plus-fill me-2"></i>Nuevo Usuario
+    </button>
 </div>
+
+@if (!string.IsNullOrEmpty(mensajeSistema))
+{
+    <div class="alert @(esError ? "alert-danger" : "alert-success") border-0 shadow-sm mb-4 d-flex align-items-center">
+        <i class="bi @(esError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill") me-3 fs-5"></i>
+        <div>@mensajeSistema</div>
+        <button type="button" class="btn-close ms-auto" @onclick="() => mensajeSistema = string.Empty"></button>
+    </div>
+}
 
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
@@ -23,35 +36,59 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var user in listaUsuarios)
+                    @if (listaUsuarios == null || !listaUsuarios.Any())
                     {
                         <tr>
-                            <td class="ps-4 fw-semibold text-dark">
-                                <i class="bi bi-person-circle text-muted me-2 fs-5 align-middle"></i>@user.Correo
-                            </td>
-                            <td style="width: 250px;">
-                                <select @bind="user.RolId" class="form-select form-select-sm bg-light">
-                                    @foreach (var rol in listaRoles)
-                                    {
-                                        <option value="@rol.IdRol">@rol.NombreRol</option>
-                                    }
-                                </select>
-                            </td>
-                            <td class="text-center">
-                                @if (user.EstadoActivo)
-                                {
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3">Activo</span>
-                                }
-                                else
-                                {
-
-                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3">Inactivo</span>
-                                }
-                            </td>
-                            <td class="pe-4 text-end">
-                                <button class="btn btn-sm btn-outline-primary shadow-sm" @onclick="() => GuardarCambiosRol(user)">Guardar Cambio</button>
-                            </td>
+                            <td colspan="4" class="text-center py-4 text-muted">Cargando usuarios...</td>
                         </tr>
+                    }
+                    else
+                    {
+                        @foreach (var user in listaUsuarios)
+                        {
+                            <tr>
+                                <td class="ps-4 fw-semibold text-dark">
+                                    <i class="bi bi-person-circle text-muted me-2 fs-5 align-middle"></i>@user.Correo
+                                </td>
+                                <td>
+                                    @user.Rol?.NombreRol @(user.Correo == correoUsuarioActual ? "(Tú)" : "")
+                                </td>
+                                <td class="text-center">
+                                    @if (user.EstadoActivo)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3">Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3">Inactivo</span>
+                                    }
+                                </td>
+                                <td class="pe-4 text-end">
+                                    @if (user.Correo == "admin@lilasboutique.com" && correoUsuarioActual != "admin@lilasboutique.com")
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary shadow-sm" disabled title="Solo el Administrador Principal puede editar esta cuenta.">
+                                            <i class="bi bi-shield-lock-fill me-1"></i> Protegido
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <button class="btn btn-sm btn-outline-primary shadow-sm" @onclick="() => AbrirModalEditar(user)">
+                                                <i class="bi bi-pencil-square me-1"></i> Editar
+                                            </button>
+
+                                            @* REGLA: Solo el admin principal, no en su propio registro, y solo usuarios inactivos *@
+                                            @if (correoUsuarioActual == "admin@lilasboutique.com" && user.Correo != "admin@lilasboutique.com" && !user.EstadoActivo)
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger shadow-sm" title="Eliminar Usuario" @onclick="() => AbrirModalEliminar(user)">
+                                                    <i class="bi bi-trash-fill"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
                     }
                 </tbody>
             </table>
@@ -59,33 +96,296 @@
     </div>
 </div>
 
-@if (!string.IsNullOrEmpty(mensajeSistema))
+<!-- ================= MODAL NUEVO USUARIO ================= -->
+@if (mostrarModalNuevo)
 {
-    <div class="alert alert-info border-0 shadow-sm mt-4">
-        <i class="bi bi-info-circle me-2"></i>@mensajeSistema
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2"></i>Registrar Nuevo Usuario</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModales"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Correo Electrónico</label>
+                        <input type="email" class="form-control" @bind="nuevoCorreo" placeholder="ejemplo@lilasboutique.com" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Contraseña Temporal</label>
+                        <input type="password" class="form-control" @bind="nuevaContrasena" placeholder="Asigne una contraseña segura" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Rol del Usuario</label>
+                        <select class="form-select" @bind="nuevoRolId">
+                            <option value="0">Seleccione un rol...</option>
+                            @foreach (var rol in listaRoles)
+                            {
+                                <option value="@rol.IdRol">@rol.NombreRol</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CerrarModales">Cancelar</button>
+                    <button type="button" class="btn btn-primary fw-bold" @onclick="CrearUsuario">Guardar Usuario</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ================= MODAL EDITAR USUARIO ================= -->
+@if (mostrarModalEditar)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Editar Usuario</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModales"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Correo Electrónico</label>
+                        <input type="email" class="form-control" @bind="editCorreo" />
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Nivel de Privilegio</label>
+                            <select class="form-select" @bind="editRolId" disabled="@rolBloqueado">
+                                @foreach (var rol in listaRoles)
+                                {
+                                    <option value="@rol.IdRol">@rol.NombreRol</option>
+                                }
+                            </select>
+                            @if (rolBloqueado)
+                            {
+                                <div class="form-text text-danger small">No tienes permiso para modificar este rol.</div>
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Estado del Usuario</label>
+                            <select class="form-select" value="@editEstadoActivoStr" @onchange="OnEstadoChanged" disabled="@(editIdUsuario == idUsuarioActual)">
+                                <option value="True">Activo</option>
+                                <option value="False">Inactivo</option>
+                            </select>
+                            @if (editIdUsuario == idUsuarioActual)
+                            {
+                                <div class="form-text text-danger small">No puedes desactivar tu propia cuenta.</div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-2 p-3 bg-light border rounded">
+                        <label class="form-label small fw-semibold text-secondary">Actualizar Contraseña (Opcional)</label>
+                        <input type="password" class="form-control" @bind="editNuevaContrasena" placeholder="Dejar en blanco para conservar la actual" />
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CerrarModales">Cancelar</button>
+                    <button type="button" class="btn btn-warning fw-bold text-dark" @onclick="GuardarEdicionUsuario">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ================= MODAL ELIMINAR USUARIO ================= -->
+@if (mostrarModalEliminar)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Eliminar Usuario</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModales"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <i class="bi bi-trash3 text-danger display-4 mb-3"></i>
+                    <p class="fs-5 mb-1">¿Está seguro de que desea eliminar permanentemente la cuenta <strong>@usuarioAEliminar?.Correo</strong>?</p>
+                    <p class="text-muted small">Esta acción borrará el registro y no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CerrarModales">Cancelar</button>
+                    <button type="button" class="btn btn-danger fw-bold" @onclick="ConfirmarEliminarUsuario">Sí, Eliminar</button>
+                </div>
+            </div>
+        </div>
     </div>
 }
 
 @code {
-    // [Mantener exactamente el mismo bloque @code de la respuesta anterior de Usuarios.razor]
     private List<Usuario> listaUsuarios = new();
     private List<Rol> listaRoles = new();
     private string mensajeSistema = "";
+    private bool esError = false;
+    private string correoUsuarioActual = "";
+    private int idUsuarioActual = 0;
 
-    protected override async Task OnInitializedAsync() => await CargarDatos();
+    // Variables Modal Nuevo
+    private bool mostrarModalNuevo = false;
+    private string nuevoCorreo = "";
+    private string nuevaContrasena = "";
+    private int nuevoRolId = 0;
+
+    // Variables Modal Editar
+    private bool mostrarModalEditar = false;
+    private int editIdUsuario = 0;
+    private string editCorreo = "";
+    private int editRolId = 0;
+    private bool editEstadoActivo = true;
+    private string editEstadoActivoStr = "True";
+    private string editNuevaContrasena = "";
+    private bool rolBloqueado = false;
+
+    // Variables Modal Eliminar
+    private bool mostrarModalEliminar = false;
+    private Usuario? usuarioAEliminar;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (!user.IsInRole("Administrador"))
+        {
+            if (user.IsInRole("Vendedor")) Navigation.NavigateTo("/catalogos");
+            else if (user.IsInRole("Bodeguero")) Navigation.NavigateTo("/bodega");
+            else Navigation.NavigateTo("/");
+            return;
+        }
+
+        correoUsuarioActual = user.Identity?.Name ?? "";
+        await CargarDatos();
+
+        var uActual = listaUsuarios.FirstOrDefault(u => u.Correo == correoUsuarioActual);
+        if (uActual != null) idUsuarioActual = uActual.IdUsuario;
+    }
+
     private async Task CargarDatos()
     {
         listaUsuarios = await UsuarioService.ObtenerTodos();
         listaRoles = await UsuarioService.ObtenerRoles();
     }
-    private async Task GuardarCambiosRol(Usuario user)
+
+    // --- LÓGICA MODAL NUEVO ---
+    private void AbrirModalNuevoUsuario()
     {
+        nuevoCorreo = ""; nuevaContrasena = ""; nuevoRolId = 0;
+        mostrarModalNuevo = true;
+    }
+
+    private async Task CrearUsuario()
+    {
+        if (string.IsNullOrWhiteSpace(nuevoCorreo) || string.IsNullOrWhiteSpace(nuevaContrasena) || nuevoRolId == 0)
+        {
+            MostrarMensaje("Debe completar el correo, la contraseña y seleccionar un rol válido.", true);
+            return;
+        }
         try
         {
-            await UsuarioService.ActualizarRol(user.IdUsuario, user.RolId);
-            mensajeSistema = $"Rol del usuario {user.Correo} actualizado correctamente.";
+            await UsuarioService.CrearUsuario(nuevoCorreo, nuevaContrasena, nuevoRolId);
+            MostrarMensaje($"¡El usuario {nuevoCorreo} fue creado exitosamente!", false);
+            CerrarModales();
             await CargarDatos();
         }
-        catch (Exception ex) { mensajeSistema = $"Error al actualizar: {ex.Message}"; }
+        catch (Exception ex)
+        {
+            MostrarMensaje($"Error: {ex.Message}", true);
+        }
+    }
+
+    // --- LÓGICA MODAL EDITAR ---
+    private void AbrirModalEditar(Usuario u)
+    {
+        if (u.Correo == "admin@lilasboutique.com" && correoUsuarioActual != "admin@lilasboutique.com")
+        {
+            MostrarMensaje("No tienes permisos suficientes para editar la cuenta del Administrador Principal.", true);
+            return;
+        }
+
+        editIdUsuario = u.IdUsuario;
+        editCorreo = u.Correo;
+        editRolId = u.RolId;
+
+        editEstadoActivo = u.EstadoActivo;
+        editEstadoActivoStr = u.EstadoActivo ? "True" : "False";
+
+        editNuevaContrasena = "";
+
+        bool esPropioUsuario = u.Correo == correoUsuarioActual;
+        bool esAdminPrincipal = correoUsuarioActual == "admin@lilasboutique.com";
+        bool usuarioObjetivoEsAdmin = u.Rol?.NombreRol == "Administrador";
+
+        rolBloqueado = esPropioUsuario || (!esAdminPrincipal && usuarioObjetivoEsAdmin);
+
+        mostrarModalEditar = true;
+    }
+
+    private void OnEstadoChanged(ChangeEventArgs e)
+    {
+        editEstadoActivoStr = e.Value?.ToString() ?? "True";
+        editEstadoActivo = editEstadoActivoStr == "True";
+    }
+
+    private async Task GuardarEdicionUsuario()
+    {
+        if (string.IsNullOrWhiteSpace(editCorreo))
+        {
+            MostrarMensaje("El correo no puede quedar vacío.", true);
+            return;
+        }
+
+        try
+        {
+            await UsuarioService.ActualizarUsuarioCompleto(editIdUsuario, editCorreo, editNuevaContrasena, editRolId, editEstadoActivo);
+            MostrarMensaje("Usuario actualizado exitosamente.", false);
+            CerrarModales();
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            MostrarMensaje($"Error al actualizar: {ex.Message}", true);
+        }
+    }
+
+    // --- LÓGICA MODAL ELIMINAR ---
+    private void AbrirModalEliminar(Usuario u)
+    {
+        usuarioAEliminar = u;
+        mostrarModalEliminar = true;
+    }
+
+    private async Task ConfirmarEliminarUsuario()
+    {
+        if (usuarioAEliminar == null) return;
+
+        try
+        {
+            await UsuarioService.EliminarUsuario(usuarioAEliminar.IdUsuario);
+            MostrarMensaje($"El usuario {usuarioAEliminar.Correo} ha sido eliminado permanentemente.", false);
+            CerrarModales();
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            MostrarMensaje($"Error al eliminar (Es probable que el usuario tenga registros vinculados): {ex.Message}", true);
+            CerrarModales();
+        }
+    }
+
+    private void CerrarModales()
+    {
+        mostrarModalNuevo = false;
+        mostrarModalEditar = false;
+        mostrarModalEliminar = false;
+    }
+
+    private void MostrarMensaje(string mensaje, bool error)
+    {
+        mensajeSistema = mensaje;
+        esError = error;
     }
 }

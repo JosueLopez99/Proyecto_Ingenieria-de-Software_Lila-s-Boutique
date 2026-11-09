@@ -11,8 +11,13 @@ namespace LilasBoutique.Data
         Task<List<Color>> ObtenerColores();
         Task GuardarPrendaCompleta(Prenda prenda, List<VariantePrenda> variantes);
         Task<List<VariantePrenda>> ObtenerCatalogo(string filtroBusqueda = "");
-        Task RegistrarVenta(int varianteId, int cantidadVendida, int usuarioId);
-        Task RegistrarMovimientoBodega(int varianteId, string tipoOperacion, int cantidad, int usuarioId, string justificacion);
+
+        // Actualizado para recibir el correo exacto del vendedor
+        Task RegistrarVenta(int varianteId, int cantidadVendida, string correoUsuario);
+
+        Task RegistrarMovimientoBodega(int idVariante, string tipoOperacion, int cantidad, string correoUsuario, string justificacion);
+        Task EliminarVariante(int idVariante);
+        Task ActualizarVariante(VariantePrenda variante);
 
         // Métodos de Creación
         Task AgregarCategoria(Categoria categoria);
@@ -36,20 +41,60 @@ namespace LilasBoutique.Data
 
         public InventarioService(LilaBoutiqueContext context) => _context = context;
 
-        public async Task<List<Categoria>> ObtenerCategorias() => await _context.Categoria.ToListAsync();
-        public async Task<List<Talla>> ObtenerTallas() => await _context.Talla.ToListAsync();
-        public async Task<List<Color>> ObtenerColores() => await _context.Color.ToListAsync();
+        // Se agrega AsNoTracking() para evitar el bloqueo en memoria que causaba el error de asociación al vender o editar.
+        public async Task<List<Categoria>> ObtenerCategorias() => await _context.Categoria.AsNoTracking().ToListAsync();
+        public async Task<List<Talla>> ObtenerTallas() => await _context.Talla.AsNoTracking().ToListAsync();
+        public async Task<List<Color>> ObtenerColores() => await _context.Color.AsNoTracking().ToListAsync();
 
-        public async Task GuardarPrendaCompleta(Prenda prenda, List<VariantePrenda> variantes)
+        public async Task GuardarPrendaCompleta(Prenda nuevaPrenda, List<VariantePrenda> variantes)
         {
-            prenda.Variantes = variantes;
-            _context.Prenda.Add(prenda);
+            // 1. Verificar que el código identificador no exista ya
+            bool codigoExiste = await _context.Prenda
+                .AnyAsync(p => p.CodigoIdentificador.ToLower() == nuevaPrenda.CodigoIdentificador.ToLower());
+
+            if (codigoExiste)
+            {
+                throw new Exception($"El código identificador '{nuevaPrenda.CodigoIdentificador}' ya está en uso por otra prenda.");
+            }
+
+            // 2. NUEVA VALIDACIÓN: Bloqueo de clones físicos exactos
+            foreach (var varianteTemporal in variantes)
+            {
+                bool clonExiste = await _context.VariantePrenda
+                    .Include(vp => vp.Prenda)
+                    .AnyAsync(vp =>
+                        vp.Prenda.CategoriaId == nuevaPrenda.CategoriaId &&
+                        vp.Prenda.Marca.ToLower() == nuevaPrenda.Marca.ToLower() &&
+                        vp.TallaId == varianteTemporal.TallaId &&
+                        vp.ColorId == varianteTemporal.ColorId);
+
+                if (clonExiste)
+                {
+                    // Extraemos los nombres reales de la BD para dar un error específico y entendible
+                    var nombreTalla = await _context.Talla.Where(t => t.IdTalla == varianteTemporal.TallaId).Select(t => t.NombreTalla).FirstOrDefaultAsync();
+                    var nombreColor = await _context.Color.Where(c => c.IdColor == varianteTemporal.ColorId).Select(c => c.NombreColor).FirstOrDefaultAsync();
+
+                    throw new Exception($"Registro bloqueado: Ya existe una prenda '{nuevaPrenda.Marca}' en talla '{nombreTalla}' y color '{nombreColor}' en el catálogo. No se permiten registros duplicados.");
+                }
+            }
+
+            // 3. Proceso original de guardado si pasa todas las pruebas
+            _context.Prenda.Add(nuevaPrenda);
+            await _context.SaveChangesAsync();
+
+            foreach (var variante in variantes)
+            {
+                variante.PrendaId = nuevaPrenda.IdPrenda;
+                _context.VariantePrenda.Add(variante);
+            }
+
             await _context.SaveChangesAsync();
         }
 
         public async Task<List<VariantePrenda>> ObtenerCatalogo(string filtroBusqueda = "")
         {
             var query = _context.VariantePrenda
+                .AsNoTracking() // Libera los datos de la memoria para que no haya conflictos de llave foránea
                 .Include(v => v.Prenda).ThenInclude(p => p.Categoria)
                 .Include(v => v.Talla)
                 .Include(v => v.Color)
@@ -65,7 +110,7 @@ namespace LilasBoutique.Data
             return await query.ToListAsync();
         }
 
-        public async Task RegistrarVenta(int varianteId, int cantidadVendida, int usuarioId)
+        public async Task RegistrarVenta(int varianteId, int cantidadVendida, string correoUsuario)
         {
             var variante = await _context.VariantePrenda.FindAsync(varianteId);
             if (variante == null) throw new Exception("Variante no encontrada");
@@ -73,14 +118,19 @@ namespace LilasBoutique.Data
             if (variante.StockFisicoActual < cantidadVendida)
                 throw new Exception("Stock insuficiente para realizar la venta.");
 
+            // Buscar el ID real del usuario basado en el correo exacto de la sesión
+            var usuario = await _context.Usuario.FirstOrDefaultAsync(u => u.Correo.ToLower() == correoUsuario.ToLower());
+            if (usuario == null) throw new Exception("No se pudo validar el usuario actual en la base de datos.");
+
             variante.StockFisicoActual -= cantidadVendida;
 
             var movimiento = new MovimientoAuditoria
             {
                 VarianteId = varianteId,
-                UsuarioId = usuarioId,
+                UsuarioId = usuario.IdUsuario, // ID real obtenido de la BD
                 CantidadAfectada = cantidadVendida,
                 TipoOperacion = "VENTA_CLIENTE",
+                Justificacion = "Venta desde catálogo",
                 FechaHora = DateTime.Now
             };
 
@@ -88,39 +138,133 @@ namespace LilasBoutique.Data
             await _context.SaveChangesAsync();
         }
 
-        public async Task RegistrarMovimientoBodega(int varianteId, string tipoOperacion, int cantidad, int usuarioId, string justificacion)
+        public async Task EliminarVariante(int idVariante)
         {
-            var variante = await _context.VariantePrenda.FindAsync(varianteId);
-            if (variante == null) throw new Exception("Variante no encontrada");
+            var variante = await _context.VariantePrenda.FindAsync(idVariante);
+            if (variante != null)
+            {
+                // Soluciona el error de "Esta prenda ya tiene historial" eliminando primero los movimientos asociados en la BD
+                var movimientosAsociados = await _context.MovimientoAuditoria.Where(m => m.VarianteId == idVariante).ToListAsync();
+                if (movimientosAsociados.Any())
+                {
+                    _context.MovimientoAuditoria.RemoveRange(movimientosAsociados);
+                }
 
-            bool esSalida = tipoOperacion.Contains("Salida");
+                _context.VariantePrenda.Remove(variante);
+                await _context.SaveChangesAsync();
+            }
+        }
 
-            if (esSalida)
+        public async Task ActualizarVariante(VariantePrenda varianteModificada)
+        {
+            // 1. Obtenemos la variante original y su ficha maestra (Prenda) para analizar la situación
+            var varianteOriginal = await _context.VariantePrenda
+                .Include(v => v.Prenda)
+                .ThenInclude(p => p.Variantes) // Cargamos las variantes hermanas
+                .FirstOrDefaultAsync(v => v.IdVariante == varianteModificada.IdVariante);
+
+            if (varianteOriginal == null) throw new Exception("La variante no fue encontrada.");
+
+            // Detectamos si el usuario realmente cambió el código o la marca en el modal
+            bool huboCambioMaestro = varianteOriginal.Prenda.CodigoIdentificador.ToLower() != varianteModificada.Prenda.CodigoIdentificador.ToLower() ||
+                                     varianteOriginal.Prenda.Marca.ToLower() != varianteModificada.Prenda.Marca.ToLower();
+
+            // 2. Validación: Que el nuevo código no esté ocupado por OTRA prenda activa distinta
+            if (huboCambioMaestro)
+            {
+                bool codigoOcupado = await _context.Prenda
+                    .Where(p => p.CodigoIdentificador.ToLower() == varianteModificada.Prenda.CodigoIdentificador.ToLower()
+                             && p.IdPrenda != varianteOriginal.PrendaId)
+                    .AnyAsync(p => p.Variantes.Any());
+
+                if (codigoOcupado) throw new Exception($"El código '{varianteModificada.Prenda.CodigoIdentificador}' ya pertenece a otra prenda activa en el catálogo.");
+            }
+
+            int cantidadVariantesAsociadas = varianteOriginal.Prenda.Variantes.Count;
+
+            // =========================================================
+            // 3. ESTRATEGIA DE SEPARACIÓN (SPLIT)
+            // =========================================================
+            // Si hay un cambio en el código o marca, Y la prenda maestra tiene más de 1 variante (hermanas compartiendo código)...
+            if (huboCambioMaestro && cantidadVariantesAsociadas > 1)
+            {
+                // Creamos una nueva Ficha Maestra independiente para aislar esta variante
+                var nuevaPrenda = new Prenda
+                {
+                    CodigoIdentificador = varianteModificada.Prenda.CodigoIdentificador,
+                    Marca = varianteModificada.Prenda.Marca,
+                    CategoriaId = varianteOriginal.Prenda.CategoriaId,
+                    DescripcionBreve = varianteOriginal.Prenda.DescripcionBreve
+                };
+
+                _context.Prenda.Add(nuevaPrenda);
+                await _context.SaveChangesAsync(); // Guardamos para que SQL genere el nuevo IdPrenda
+
+                // Movemos esta variante específica a la nueva Prenda y actualizamos su precio
+                await _context.VariantePrenda
+                    .Where(v => v.IdVariante == varianteModificada.IdVariante)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(v => v.PrendaId, nuevaPrenda.IdPrenda)
+                        .SetProperty(v => v.Precio, varianteModificada.Precio));
+            }
+            else
+            {
+                // Si es "hija única", O si NO hubo cambio de código/marca (es decir, solo le cambiaron el precio)
+                await _context.VariantePrenda
+                    .Where(v => v.IdVariante == varianteModificada.IdVariante)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(v => v.Precio, varianteModificada.Precio));
+
+                // Si fue hija única y le cambiaron el código, actualizamos a la madre directamente porque no afecta a nadie más
+                if (huboCambioMaestro)
+                {
+                    await _context.Prenda
+                        .Where(p => p.IdPrenda == varianteOriginal.PrendaId)
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(p => p.CodigoIdentificador, varianteModificada.Prenda.CodigoIdentificador)
+                            .SetProperty(p => p.Marca, varianteModificada.Prenda.Marca));
+                }
+            }
+        }
+
+        public async Task RegistrarMovimientoBodega(int idVariante, string tipoOperacion, int cantidad, string correoUsuario, string justificacion)
+        {
+            var variante = await _context.VariantePrenda.FindAsync(idVariante);
+            if (variante == null) throw new Exception("La variante seleccionada no existe.");
+
+            // 1. Buscamos el ID real del usuario basado en el correo exacto de la sesión
+            var usuario = await _context.Usuario.FirstOrDefaultAsync(u => u.Correo.ToLower() == correoUsuario.ToLower());
+            if (usuario == null) throw new Exception("No se pudo validar el usuario actual en la base de datos.");
+
+            // 2. Lógica estricta de Suma o Resta
+            if (tipoOperacion == "RECEPCION_PROVEEDOR")
+            {
+                variante.StockFisicoActual += cantidad;
+            }
+            else if (tipoOperacion == "MERMA_DAÑO")
             {
                 if (variante.StockFisicoActual < cantidad)
-                    throw new Exception("El stock actual no puede quedar en negativo.");
+                    throw new Exception($"No hay suficiente stock. Stock actual: {variante.StockFisicoActual}");
 
                 variante.StockFisicoActual -= cantidad;
             }
             else
             {
-                variante.StockFisicoActual += cantidad;
+                throw new Exception("Tipo de operación no reconocida.");
             }
 
-            // MAPEO EXACTO: Traducimos a los valores permitidos por tu restricción CHK_Tipo_Operacion
-            string tipoOperacionDB = esSalida ? "MERMA_DAÑO" : "RECEPCION_PROVEEDOR";
-
-            var movimiento = new MovimientoAuditoria
+            // 3. Registro exacto en la Auditoría
+            var auditoria = new MovimientoAuditoria
             {
-                VarianteId = varianteId,
-                UsuarioId = usuarioId,
-                CantidadAfectada = esSalida ? -cantidad : cantidad,
-                TipoOperacion = tipoOperacionDB, // Valor exacto exigido por SQL
-                Justificacion = justificacion,   // Guardamos el texto escrito en la UI
-                FechaHora = DateTime.Now
+                VarianteId = idVariante,
+                UsuarioId = usuario.IdUsuario, // ID real obtenido de la BD
+                TipoOperacion = tipoOperacion,
+                CantidadAfectada = cantidad,
+                FechaHora = DateTime.Now,
+                Justificacion = justificacion
             };
 
-            _context.MovimientoAuditoria.Add(movimiento);
+            _context.MovimientoAuditoria.Add(auditoria);
             await _context.SaveChangesAsync();
         }
 
@@ -131,9 +275,21 @@ namespace LilasBoutique.Data
             await _context.SaveChangesAsync();
         }
 
-        public async Task AgregarTalla(Talla talla)
+        public async Task AgregarTalla(Talla nuevaTalla)
         {
-            _context.Talla.Add(talla);
+            // 1. Verificamos si ya existe la misma talla DENTRO de la misma categoría
+            bool existeTalla = await _context.Talla.AnyAsync(t =>
+                t.CategoriaId == nuevaTalla.CategoriaId &&
+                t.NombreTalla.ToLower() == nuevaTalla.NombreTalla.ToLower());
+
+            if (existeTalla)
+            {
+                // Si existe, lanzamos un error que será capturado por el bloque try-catch de Parametros.razor
+                throw new Exception($"La talla '{nuevaTalla.NombreTalla}' ya está registrada en esta categoría.");
+            }
+
+            // 2. Si no existe, procedemos a guardarla normalmente
+            _context.Talla.Add(nuevaTalla);
             await _context.SaveChangesAsync();
         }
 
@@ -173,15 +329,25 @@ namespace LilasBoutique.Data
             }
         }
 
-        public async Task ActualizarTalla(Talla talla)
+        public async Task ActualizarTalla(Talla tallaModificada)
         {
-            var existente = await _context.Talla.FindAsync(talla.IdTalla);
-            if (existente != null)
+            // 1. Verificamos duplicados, asegurándonos de ignorar el ID de la talla que estamos editando
+            bool existeTalla = await _context.Talla.AnyAsync(t =>
+                t.CategoriaId == tallaModificada.CategoriaId &&
+                t.NombreTalla.ToLower() == tallaModificada.NombreTalla.ToLower() &&
+                t.IdTalla != tallaModificada.IdTalla);
+
+            if (existeTalla)
             {
-                existente.NombreTalla = talla.NombreTalla;
-                existente.CategoriaId = talla.CategoriaId;
-                await _context.SaveChangesAsync();
+                throw new Exception($"La talla '{tallaModificada.NombreTalla}' ya está registrada en esta categoría.");
             }
+
+            // 2. Actualizamos usando ExecuteUpdateAsync para mayor rendimiento y evitar contaminación de caché
+            await _context.Talla
+                .Where(t => t.IdTalla == tallaModificada.IdTalla)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(t => t.NombreTalla, tallaModificada.NombreTalla)
+                    .SetProperty(t => t.CategoriaId, tallaModificada.CategoriaId));
         }
 
         public async Task ActualizarColor(Color color)

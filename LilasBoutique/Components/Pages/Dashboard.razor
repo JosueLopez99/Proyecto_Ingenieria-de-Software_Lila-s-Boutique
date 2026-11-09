@@ -1,13 +1,17 @@
 ﻿@page "/dashboard"
 @rendermode InteractiveServer
 @attribute [Authorize]
+@implements IDisposable
 @using LilasBoutique.Data
 @using LilasBoutique.Models
 @using Microsoft.AspNetCore.Authorization
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 @inject IDashboardService DashboardService
 
 <h3 class="fw-bold mb-4">Dashboard y Resumen Gerencial</h3>
 
+<!-- Tarjeta de valor total -->
 <div class="row mb-4">
     <div class="col-md-4">
         <div class="card border-0 shadow-sm bg-primary text-white text-center" style="border-radius: 1rem;">
@@ -19,18 +23,19 @@
     </div>
 </div>
 
+<!-- Alertas de Desabastecimiento -->
 <h4 class="fw-semibold mb-3"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Alertas de Desabastecimiento</h4>
 
 @if (alertasDesabastecimiento.Any())
 {
-    <div class="row">
+    <div class="row mb-5">
         @foreach (var alerta in alertasDesabastecimiento)
         {
             <div class="col-md-6 col-lg-4 mb-3">
                 <div class="card border-start border-danger border-4 shadow-sm h-100">
                     <div class="card-body">
-                        <h6 class="fw-bold">@alerta.Prenda?.Marca - @alerta.Prenda?.Categoria?.NombreCategoria</h6>
-                        <p class="mb-1 text-muted">Talla: <strong>@alerta.Talla.NombreTalla</strong> | Color: <strong>@alerta.Color.NombreColor</strong></p>
+                        <h6 class="fw-bold">@(alerta.Prenda?.CodigoIdentificador) | @alerta.Prenda?.Marca - @alerta.Prenda?.Categoria?.NombreCategoria</h6>
+                        <p class="mb-1 text-muted">Talla: <strong>@alerta.Talla?.NombreTalla</strong> | Color: <strong>@alerta.Color?.NombreColor</strong></p>
                         <div class="d-flex justify-content-between align-items-center mt-3">
                             <span class="badge bg-danger rounded-pill px-3 py-2">Stock: @alerta.StockFisicoActual</span>
                             <small class="text-muted">Límite: @alerta.LimiteAlerta</small>
@@ -43,7 +48,7 @@
 }
 else
 {
-    <div class="alert alert-success border-0 shadow-sm d-flex align-items-center" role="alert">
+    <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-5" role="alert">
         <i class="bi bi-check-circle-fill me-3 fs-4"></i>
         <div>
             <h5 class="alert-heading mb-1">¡Todo en orden!</h5>
@@ -52,13 +57,142 @@ else
     </div>
 }
 
+<!-- Auditoría de Movimientos -->
+<h4 class="fw-semibold mb-3"><i class="bi bi-clock-history text-info me-2"></i>Auditoría de Base de Datos</h4>
+<div class="card border-0 shadow-sm mb-5">
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+            <table class="table table-hover align-middle mb-0 text-center small">
+                <thead class="table-light position-sticky top-0" style="z-index: 1;">
+                    <tr>
+                        <th class="py-3 text-secondary">Fecha y Hora</th>
+                        <th class="py-3 text-secondary">Usuario</th>
+                        <th class="py-3 text-secondary">Operación</th>
+                        <th class="py-3 text-secondary text-start">Prenda Afectada</th>
+                        <th class="py-3 text-secondary">Cant.</th>
+                        <th class="py-3 text-secondary text-start">Justificación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!listaAuditoria.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-muted py-4">No hay movimientos registrados en el sistema.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var mov in listaAuditoria)
+                        {
+                            <tr>
+                                <td class="fw-semibold text-secondary">@mov.FechaHora.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">
+                                        <i class="bi bi-person-circle me-1"></i>@(mov.Usuario?.Correo ?? "Sistema")
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (mov.TipoOperacion.Contains("RECEPCION", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">Entrada (Proveedor)</span>
+                                    }
+                                    else if (mov.TipoOperacion.Contains("MERMA", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Salida (Merma)</span>
+                                    }
+                                    else if (mov.TipoOperacion.Contains("VENTA", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Venta (Cliente)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">@mov.TipoOperacion</span>
+                                    }
+                                </td>
+                                <td class="text-start">
+                                    <strong>@(mov.Variante?.Prenda?.CodigoIdentificador)</strong><br />
+                                    <span class="text-muted" style="font-size: 0.85rem;">
+                                        @(mov.Variante?.Prenda?.Marca) | T: @(mov.Variante?.Talla?.NombreTalla) | C: @(mov.Variante?.Color?.NombreColor)
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="fw-bold @(mov.TipoOperacion.Contains("MERMA", StringComparison.OrdinalIgnoreCase) || mov.TipoOperacion.Contains("VENTA", StringComparison.OrdinalIgnoreCase) ? "text-danger" : "text-success")">
+                                        @(mov.TipoOperacion.Contains("MERMA", StringComparison.OrdinalIgnoreCase) || mov.TipoOperacion.Contains("VENTA", StringComparison.OrdinalIgnoreCase) ? "-" : "+")@mov.CantidadAfectada
+                                    </span>
+                                </td>
+                                <td class="text-start text-muted fst-italic" style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="@mov.Justificacion">
+                                    @(string.IsNullOrWhiteSpace(mov.Justificacion) ? "Sin justificación" : mov.Justificacion)
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 @code {
     private decimal ValorTotalInventario;
     private List<VariantePrenda> alertasDesabastecimiento = new();
+    private List<MovimientoAuditoria> listaAuditoria = new();
+
+    // Variables para el tiempo real
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource _cts = new();
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (!user.IsInRole("Administrador"))
+        {
+            if (user.IsInRole("Vendedor")) Navigation.NavigateTo("/catalogos");
+            else if (user.IsInRole("Bodeguero")) Navigation.NavigateTo("/bodega");
+            else Navigation.NavigateTo("/");
+            return;
+        }
+
+        // Carga inicial de datos
+        await CargarDatosDashboard();
+
+        // Iniciar el temporizador para actualizar en tiempo real
+        IniciarActualizacionEnTiempoReal();
+    }
+
+    private async Task CargarDatosDashboard()
+    {
         ValorTotalInventario = await DashboardService.CalcularValorInventario();
         alertasDesabastecimiento = await DashboardService.ObtenerAlertasStock();
+        listaAuditoria = await DashboardService.ObtenerAuditoriaReciente();
+    }
+
+    private async void IniciarActualizacionEnTiempoReal()
+    {
+        // Configura el refresco cada 5 segundos
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+
+        try
+        {
+            while (await _timer.WaitForNextTickAsync(_cts.Token))
+            {
+                await CargarDatosDashboard();
+
+                // Le indica a Blazor que debe repintar la pantalla con los nuevos datos
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // El ciclo se cancela limpiamente cuando el usuario sale de la página
+        }
+    }
+
+    // Libera la memoria y apaga el ciclo al cambiar de pestaña
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _timer?.Dispose();
     }
 }

@@ -7,6 +7,7 @@ namespace LilasBoutique.Data
     {
         Task<decimal> CalcularValorInventario();
         Task<List<VariantePrenda>> ObtenerAlertasStock();
+        Task<List<MovimientoAuditoria>> ObtenerAuditoriaReciente(int limite = 100);
     }
 
     public class DashboardService : IDashboardService
@@ -32,6 +33,22 @@ namespace LilasBoutique.Data
                 .Include(v => v.Color)
         .Where(v => v.StockFisicoActual <= v.LimiteAlerta)
         .ToListAsync();
+        }
+        public async Task<List<MovimientoAuditoria>> ObtenerAuditoriaReciente(int limite = 100)
+        {
+            // Traemos los últimos movimientos con toda su data relacional (Usuario, Prenda, Talla, Color)
+            return await _context.MovimientoAuditoria
+                .Include(m => m.Usuario)
+                .Include(m => m.Variante) // Corregido a Variante
+                    .ThenInclude(v => v.Prenda)
+                .Include(m => m.Variante) // Corregido a Variante
+                    .ThenInclude(v => v.Talla)
+                .Include(m => m.Variante) // Corregido a Variante
+                    .ThenInclude(v => v.Color)
+                .OrderByDescending(m => m.FechaHora) // Corregido a FechaHora basado en tu BD
+                .Take(limite)
+                .AsNoTracking()
+                .ToListAsync();
         }
     }
 }

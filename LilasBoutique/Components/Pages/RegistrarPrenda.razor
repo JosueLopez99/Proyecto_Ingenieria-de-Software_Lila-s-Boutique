@@ -1,8 +1,9 @@
 ﻿@page "/registrar-prenda"
-@attribute [Authorize(Roles = "Administrador")]
 @rendermode InteractiveServer
 @using LilasBoutique.Models
 @using LilasBoutique.Data
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 @inject IInventarioService InventarioService
 
 <h3 class="fw-bold mb-4">Registro de Nueva Prenda</h3>
@@ -158,8 +159,8 @@
     private bool esError = false;
 
     private Prenda nuevaPrenda = new();
-    private VariantePrenda varianteActual = new() { LimiteAlerta = 5, StockFisicoActual = 0 }; // Valores por defecto recomendados
-    private decimal precioTemporal = 0; // Propiedad temporal para manejar el input numérico
+    private VariantePrenda varianteActual = new() { LimiteAlerta = 5, StockFisicoActual = 0 };
+    private decimal precioTemporal = 0;
     private List<VariantePrenda> variantesAgregadas = new();
 
     private List<Categoria> categorias = new();
@@ -169,6 +170,29 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Validación estricta por rol: Solo Administrador
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (!user.IsInRole("Administrador"))
+        {
+            if (user.IsInRole("Vendedor"))
+            {
+                Navigation.NavigateTo("/catalogos");
+                return;
+            }
+            else if (user.IsInRole("Bodeguero"))
+            {
+                Navigation.NavigateTo("/bodega");
+                return;
+            }
+            else
+            {
+                Navigation.NavigateTo("/");
+                return;
+            }
+        }
+
         try
         {
             categorias = await InventarioService.ObtenerCategorias();
@@ -198,7 +222,6 @@
 
     private void AgregarVariante()
     {
-        // Validación de variante
         if (varianteActual.TallaId == 0 || varianteActual.ColorId == 0)
         {
             MostrarMensaje("Debe seleccionar una Talla y un Color para la variante.", true);
@@ -215,7 +238,6 @@
             return;
         }
 
-        // Evitar duplicados exactos en la lista visual
         if (variantesAgregadas.Any(v => v.TallaId == varianteActual.TallaId && v.ColorId == varianteActual.ColorId))
         {
             MostrarMensaje("Esta combinación de Talla y Color ya fue agregada a la lista.", true);
@@ -225,14 +247,13 @@
         varianteActual.Precio = precioTemporal;
         variantesAgregadas.Add(varianteActual);
 
-        // Resetear la variante para el siguiente ingreso (manteniendo valores comunes como precio y stock para agilizar el ingreso)
         varianteActual = new VariantePrenda
         {
             LimiteAlerta = varianteActual.LimiteAlerta,
             StockFisicoActual = 0
         };
         precioTemporal = 0;
-        MostrarMensaje("", false); // Limpiar mensajes
+        MostrarMensaje("", false);
     }
 
     private void RemoverVariante(VariantePrenda variante)
@@ -242,7 +263,6 @@
 
     private async Task GuardarPrenda()
     {
-        // Validaciones de la Ficha Maestra
         if (string.IsNullOrWhiteSpace(nuevaPrenda.CodigoIdentificador) || string.IsNullOrWhiteSpace(nuevaPrenda.Marca) || nuevaPrenda.CategoriaId == 0)
         {
             MostrarMensaje("Complete los campos obligatorios de la Ficha Maestra (Código, Marca y Categoría).", true);
@@ -259,10 +279,9 @@
         {
             await InventarioService.GuardarPrendaCompleta(nuevaPrenda, variantesAgregadas);
 
-            // Limpiar formulario tras éxito
             nuevaPrenda = new Prenda();
             variantesAgregadas.Clear();
-            tallasDisponibles.Clear(); // Limpia el combobox de tallas
+            tallasDisponibles.Clear();
 
             MostrarMensaje("¡La prenda y sus variantes fueron guardadas exitosamente en el sistema!", false);
         }

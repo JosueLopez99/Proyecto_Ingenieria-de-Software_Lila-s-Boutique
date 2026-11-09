@@ -9,9 +9,19 @@
 @inject IUsuarioService UsuarioService
 @inject AuthenticationStateProvider AuthStateProvider
 
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-        <h3 class="fw-bold mb-4">Seguridad de la Cuenta</h3>
+<div class="container d-flex justify-content-center mt-4">
+    <div style="max-width: 500px; width: 100%;">
+
+        <h3 class="fw-bold mb-4 text-center">Seguridad de la Cuenta</h3>
+
+        @if (!string.IsNullOrEmpty(mensajeNotificacion))
+        {
+            <div class="alert @(esError ? "alert-danger" : "alert-success") shadow-sm d-flex align-items-center mb-4" role="alert">
+                <i class="bi @(esError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill") me-3 fs-5"></i>
+                <div>@mensajeNotificacion</div>
+                <button type="button" class="btn-close ms-auto" @onclick="() => mensajeNotificacion = string.Empty"></button>
+            </div>
+        }
 
         <div class="card border-0 shadow-sm" style="border-radius: 1rem;">
             <div class="card-body p-4 p-md-5">
@@ -34,35 +44,77 @@
                     </div>
 
                     <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-warning btn-lg fw-bold shadow-sm text-dark">Actualizar Credenciales</button>
+                        <button type="submit" class="btn btn-warning btn-lg fw-bold shadow-sm text-dark">
+                            Cambiar Contraseña
+                        </button>
                     </div>
                 </EditForm>
             </div>
         </div>
+
     </div>
 </div>
 
 @code {
-    // [Mantener exactamente el mismo bloque @code de la respuesta anterior de Configuracion.razor]
     [SupplyParameterFromForm]
     public CambioContraseñaDTO cambiocontraseña { get; set; } = new();
 
+    private string mensajeNotificacion = "";
+    private bool esError = false;
+
     private async Task CambiarPassword()
     {
-        if (cambiocontraseña.Nueva == cambiocontraseña.Confirmacion)
+        // 1. Validar que no existan campos vacíos
+        if (string.IsNullOrWhiteSpace(cambiocontraseña.Actual) ||
+            string.IsNullOrWhiteSpace(cambiocontraseña.Nueva) ||
+            string.IsNullOrWhiteSpace(cambiocontraseña.Confirmacion))
+        {
+            MostrarMensaje("Existen campos vacíos. Por favor, complete todos los campos de seguridad.", true);
+            return;
+        }
+
+        // 2. Validar que la nueva contraseña coincida con su confirmación
+        if (cambiocontraseña.Nueva != cambiocontraseña.Confirmacion)
+        {
+            MostrarMensaje("La confirmación no coincide con la nueva contraseña.", true);
+            return;
+        }
+
+        try
         {
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
 
             if (user.Identity is not null && user.Identity.IsAuthenticated)
             {
+                // Extraemos el ID del usuario directamente de los Claims de la sesión
                 var idClaim = user.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+
                 if (int.TryParse(idClaim, out int usuarioId))
                 {
+                    // Encriptamos la nueva contraseña y la guardamos en base de datos
                     await UsuarioService.ActualizarPassword(usuarioId, BCrypt.Net.BCrypt.HashPassword(cambiocontraseña.Nueva));
+
+                    MostrarMensaje("¡La contraseña ha sido actualizada exitosamente!", false);
+
+                    // Limpiamos el formulario tras el éxito
                     cambiocontraseña = new CambioContraseñaDTO();
+                }
+                else
+                {
+                    MostrarMensaje("Error de sesión: No se pudo identificar al usuario activo.", true);
                 }
             }
         }
+        catch (Exception ex)
+        {
+            MostrarMensaje($"Ocurrió un error al actualizar: {ex.Message}", true);
+        }
+    }
+
+    private void MostrarMensaje(string mensaje, bool error)
+    {
+        mensajeNotificacion = mensaje;
+        esError = error;
     }
 }

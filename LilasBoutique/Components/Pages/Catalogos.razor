@@ -232,6 +232,9 @@
     private int idVarianteAEliminar = 0;
     private int cantidadVenta = 1;
 
+    // NUEVA VARIABLE: Usaremos el correo en lugar del ID
+    private string correoUsuarioActual = "";
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -241,6 +244,9 @@
         {
             esAdministrador = user.IsInRole("Administrador");
             puedeVender = user.IsInRole("Administrador") || user.IsInRole("Vendedor");
+
+            // Capturamos el correo exacto de la sesión
+            correoUsuarioActual = user.Identity.Name ?? "";
         }
     }
 
@@ -276,7 +282,7 @@
         {
             var b = TextoBusqueda.ToLower();
             catalogoFiltrado = catalogoCompleto.Where(v => v != null && (
-                (v.Prenda?.CodigoIdentificador?.ToLower().Contains(b) ?? false) || // Búsqueda por código habilitada
+                (v.Prenda?.CodigoIdentificador?.ToLower().Contains(b) ?? false) ||
                 (v.Prenda?.Marca?.ToLower().Contains(b) ?? false) ||
                 (v.Prenda?.Categoria?.NombreCategoria?.ToLower().Contains(b) ?? false) ||
                 (v.Talla?.NombreTalla?.ToLower().Contains(b) ?? false) ||
@@ -314,7 +320,9 @@
 
         try
         {
-            await InventarioService.RegistrarVenta(varianteSeleccionada.IdVariante, cantidadVenta, 1);
+            // CORREGIDO: Pasamos la variable 'correoUsuarioActual' (string) en lugar del ID numérico
+            await InventarioService.RegistrarVenta(varianteSeleccionada.IdVariante, cantidadVenta, correoUsuarioActual);
+
             MostrarMensaje($"¡Venta registrada exitosamente! Se descontaron {cantidadVenta} unidades.", false);
             CerrarModales();
 
@@ -338,7 +346,7 @@
             Prenda = new Prenda
             {
                 IdPrenda = variante.Prenda?.IdPrenda ?? 0,
-                CodigoIdentificador = variante.Prenda?.CodigoIdentificador ?? "", // Cargamos el código para edición
+                CodigoIdentificador = variante.Prenda?.CodigoIdentificador ?? "",
                 Marca = variante.Prenda?.Marca ?? "",
                 CategoriaId = variante.Prenda?.CategoriaId ?? 0
             }

@@ -23,7 +23,7 @@
         <div class="col-md-6">
             <label class="form-label text-secondary small">Tipo de Operación</label>
             <select class="form-select" @bind="tipoOperacion">
-                <option value="RECEPCION_PROVEEDOR">Entrada (Proveedores)</option>          
+                <option value="RECEPCION_PROVEEDOR">Entrada (Proveedores)</option>
                 <option value="MERMA_DAÑO">Salida (Merma/Daño)</option>
             </select>
         </div>
@@ -75,9 +75,6 @@
     private int cantidadAfectada = 0;
     private string justificacion = "";
 
-    // NUEVA VARIABLE PARA ALMACENAR EL USUARIO
-    private string correoUsuarioActual = "";
-
     private List<VariantePrenda> catalogoCompleto = new();
     private List<VariantePrenda> variantesFiltradas = new();
 
@@ -94,6 +91,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Validasion ti seguridad babaen ti rol: Administrador wenno Bodeguero laeng
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
@@ -102,9 +100,6 @@
             Navigation.NavigateTo("/catalogos");
             return;
         }
-
-        // CAPTURA DEL USUARIO REAL DESDE LA SESIÓN
-        correoUsuarioActual = user.Identity?.Name ?? "";
 
         try
         {
@@ -156,8 +151,7 @@
 
         try
         {
-            // CORREGIDO: Enviamos correoUsuarioActual en lugar del número 1 fijo
-            await InventarioService.RegistrarMovimientoBodega(varianteSeleccionadaId, tipoOperacion, cantidadAfectada, correoUsuarioActual, justificacion);
+            await InventarioService.RegistrarMovimientoBodega(varianteSeleccionadaId, tipoOperacion, cantidadAfectada, 1, justificacion);
 
             string nombreOp = tipoOperacion == "RECEPCION_PROVEEDOR" ? "sumado" : "restado";
             MostrarMensaje($"Movimiento registrado exitosamente. Se ha {nombreOp} {cantidadAfectada} al stock.", false);

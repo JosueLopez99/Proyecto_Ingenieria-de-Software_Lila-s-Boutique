@@ -11,11 +11,8 @@ namespace LilasBoutique.Data
         Task<List<Color>> ObtenerColores();
         Task GuardarPrendaCompleta(Prenda prenda, List<VariantePrenda> variantes);
         Task<List<VariantePrenda>> ObtenerCatalogo(string filtroBusqueda = "");
-
-        // Actualizado para recibir el correo exacto del vendedor
-        Task RegistrarVenta(int varianteId, int cantidadVendida, string correoUsuario);
-
-        Task RegistrarMovimientoBodega(int idVariante, string tipoOperacion, int cantidad, string correoUsuario, string justificacion);
+        Task RegistrarVenta(int varianteId, int cantidadVendida, int usuarioId);
+        Task RegistrarMovimientoBodega(int varianteId, string tipoOperacion, int cantidad, int usuarioId, string justificacion);
         Task EliminarVariante(int idVariante);
         Task ActualizarVariante(VariantePrenda variante);
 
@@ -110,7 +107,7 @@ namespace LilasBoutique.Data
             return await query.ToListAsync();
         }
 
-        public async Task RegistrarVenta(int varianteId, int cantidadVendida, string correoUsuario)
+        public async Task RegistrarVenta(int varianteId, int cantidadVendida, int usuarioId)
         {
             var variante = await _context.VariantePrenda.FindAsync(varianteId);
             if (variante == null) throw new Exception("Variante no encontrada");
@@ -118,16 +115,12 @@ namespace LilasBoutique.Data
             if (variante.StockFisicoActual < cantidadVendida)
                 throw new Exception("Stock insuficiente para realizar la venta.");
 
-            // Buscar el ID real del usuario basado en el correo exacto de la sesión
-            var usuario = await _context.Usuario.FirstOrDefaultAsync(u => u.Correo.ToLower() == correoUsuario.ToLower());
-            if (usuario == null) throw new Exception("No se pudo validar el usuario actual en la base de datos.");
-
             variante.StockFisicoActual -= cantidadVendida;
 
             var movimiento = new MovimientoAuditoria
             {
                 VarianteId = varianteId,
-                UsuarioId = usuario.IdUsuario, // ID real obtenido de la BD
+                UsuarioId = usuarioId,
                 CantidadAfectada = cantidadVendida,
                 TipoOperacion = "VENTA_CLIENTE",
                 Justificacion = "Venta desde catálogo",
@@ -227,44 +220,39 @@ namespace LilasBoutique.Data
             }
         }
 
-        public async Task RegistrarMovimientoBodega(int idVariante, string tipoOperacion, int cantidad, string correoUsuario, string justificacion)
+        public async Task RegistrarMovimientoBodega(int varianteId, string tipoOperacion, int cantidad, int usuarioId, string justificacion)
         {
-            var variante = await _context.VariantePrenda.FindAsync(idVariante);
-            if (variante == null) throw new Exception("La variante seleccionada no existe.");
+            var variante = await _context.VariantePrenda.FindAsync(varianteId);
+            if (variante == null) throw new Exception("Variante no encontrada");
 
-            // 1. Buscamos el ID real del usuario basado en el correo exacto de la sesión
-            var usuario = await _context.Usuario.FirstOrDefaultAsync(u => u.Correo.ToLower() == correoUsuario.ToLower());
-            if (usuario == null) throw new Exception("No se pudo validar el usuario actual en la base de datos.");
+            bool esSalida = tipoOperacion.Contains("Salida");
 
-            // 2. Lógica estricta de Suma o Resta
-            if (tipoOperacion == "RECEPCION_PROVEEDOR")
-            {
-                variante.StockFisicoActual += cantidad;
-            }
-            else if (tipoOperacion == "MERMA_DAÑO")
+            if (esSalida)
             {
                 if (variante.StockFisicoActual < cantidad)
-                    throw new Exception($"No hay suficiente stock. Stock actual: {variante.StockFisicoActual}");
+                    throw new Exception("El stock actual no puede quedar en negativo.");
 
                 variante.StockFisicoActual -= cantidad;
             }
             else
             {
-                throw new Exception("Tipo de operación no reconocida.");
+                variante.StockFisicoActual += cantidad;
             }
 
-            // 3. Registro exacto en la Auditoría
-            var auditoria = new MovimientoAuditoria
+            // MAPEO EXACTO: Traducimos a los valores permitidos por tu restricción CHK_Tipo_Operacion
+            string tipoOperacionDB = esSalida ? "MERMA_DAÑO" : "RECEPCION_PROVEEDOR";
+
+            var movimiento = new MovimientoAuditoria
             {
-                VarianteId = idVariante,
-                UsuarioId = usuario.IdUsuario, // ID real obtenido de la BD
-                TipoOperacion = tipoOperacion,
-                CantidadAfectada = cantidad,
-                FechaHora = DateTime.Now,
-                Justificacion = justificacion
+                VarianteId = varianteId,
+                UsuarioId = usuarioId,
+                CantidadAfectada = esSalida ? -cantidad : cantidad,
+                TipoOperacion = tipoOperacionDB, // Valor exacto exigido por SQL
+                Justificacion = justificacion,   // Guardamos el texto escrito en la UI
+                FechaHora = DateTime.Now
             };
 
-            _context.MovimientoAuditoria.Add(auditoria);
+            _context.MovimientoAuditoria.Add(movimiento);
             await _context.SaveChangesAsync();
         }
 

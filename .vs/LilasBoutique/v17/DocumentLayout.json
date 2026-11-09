@@ -3,32 +3,28 @@
   "WorkspaceRootPath": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|c:\\users\\josue\\documents\\github\\proyecto_ingenieria-de-software_lila-s-boutique\\lilasboutique\\data\\inventarioservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|solutionrelative:lilasboutique\\data\\inventarioservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|c:\\users\\josue\\documents\\github\\proyecto_ingenieria-de-software_lila-s-boutique\\lilasboutique\\components\\pages\\dashboard.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
       "RelativeMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|solutionrelative:lilasboutique\\components\\pages\\dashboard.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|c:\\users\\josue\\documents\\github\\proyecto_ingenieria-de-software_lila-s-boutique\\lilasboutique\\components\\pages\\bodega.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|solutionrelative:lilasboutique\\components\\pages\\bodega.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+      "AbsoluteMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|c:\\users\\josue\\documents\\github\\proyecto_ingenieria-de-software_lila-s-boutique\\lilasboutique\\components\\_imports.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|solutionrelative:lilasboutique\\components\\_imports.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|c:\\users\\josue\\documents\\github\\proyecto_ingenieria-de-software_lila-s-boutique\\lilasboutique\\components\\app.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|solutionrelative:lilasboutique\\components\\app.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|c:\\users\\josue\\documents\\github\\proyecto_ingenieria-de-software_lila-s-boutique\\lilasboutique\\data\\dashboardservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|solutionrelative:lilasboutique\\data\\dashboardservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|c:\\users\\josue\\documents\\github\\proyecto_ingenieria-de-software_lila-s-boutique\\lilasboutique\\components\\pages\\parametros.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|solutionrelative:lilasboutique\\components\\pages\\parametros.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|c:\\users\\josue\\documents\\github\\proyecto_ingenieria-de-software_lila-s-boutique\\lilasboutique\\components\\pages\\registrarprenda.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
       "RelativeMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|solutionrelative:lilasboutique\\components\\pages\\registrarprenda.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|c:\\users\\josue\\documents\\github\\proyecto_ingenieria-de-software_lila-s-boutique\\lilasboutique\\components\\pages\\usuarios.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|solutionrelative:lilasboutique\\components\\pages\\usuarios.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|c:\\users\\josue\\documents\\github\\proyecto_ingenieria-de-software_lila-s-boutique\\lilasboutique\\components\\pages\\catalogos.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|solutionrelative:lilasboutique\\components\\pages\\catalogos.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|c:\\users\\josue\\documents\\github\\proyecto_ingenieria-de-software_lila-s-boutique\\lilasboutique\\data\\bodegaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{2FDF7C88-39B5-42BB-B3B2-885D80840442}|LilasBoutique\\LilasBoutique.csproj|solutionrelative:lilasboutique\\data\\bodegaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -38,7 +34,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 8,
+          "SelectedChildIndex": 9,
           "Children": [
             {
               "$type": "Bookmark",
@@ -66,88 +62,77 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "RegistrarPrenda.razor",
               "DocumentMoniker": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\Pages\\RegistrarPrenda.razor",
               "RelativeDocumentMoniker": "LilasBoutique\\Components\\Pages\\RegistrarPrenda.razor",
               "ToolTip": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\Pages\\RegistrarPrenda.razor",
               "RelativeToolTip": "LilasBoutique\\Components\\Pages\\RegistrarPrenda.razor",
-              "ViewState": "AgIAABIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAJsAAAAAAAAAAAAkwKgAAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-11-05T23:28:32.255Z"
+              "WhenOpened": "2026-11-09T18:24:48.901Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 4,
-              "Title": "Usuarios.razor",
-              "DocumentMoniker": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\Pages\\Usuarios.razor",
-              "RelativeDocumentMoniker": "LilasBoutique\\Components\\Pages\\Usuarios.razor",
-              "ToolTip": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\Pages\\Usuarios.razor",
-              "RelativeToolTip": "LilasBoutique\\Components\\Pages\\Usuarios.razor",
-              "ViewState": "AgIAADwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Title": "Parametros.razor",
+              "DocumentMoniker": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\Pages\\Parametros.razor",
+              "RelativeDocumentMoniker": "LilasBoutique\\Components\\Pages\\Parametros.razor",
+              "ToolTip": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\Pages\\Parametros.razor",
+              "RelativeToolTip": "LilasBoutique\\Components\\Pages\\Parametros.razor",
+              "ViewState": "AgIAALcAAAAAAAAAAAAAAMAAAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-11-05T23:28:24.542Z"
+              "WhenOpened": "2026-11-09T18:24:40.52Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "DashboardService.cs",
+              "DocumentMoniker": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Data\\DashboardService.cs",
+              "RelativeDocumentMoniker": "LilasBoutique\\Data\\DashboardService.cs",
+              "ToolTip": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Data\\DashboardService.cs",
+              "RelativeToolTip": "LilasBoutique\\Data\\DashboardService.cs",
+              "ViewState": "AgIAAB8AAAAAAAAAAAAwwDMAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-09T18:18:53.406Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "InventarioService.cs",
-              "DocumentMoniker": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Data\\InventarioService.cs",
-              "RelativeDocumentMoniker": "LilasBoutique\\Data\\InventarioService.cs",
-              "ToolTip": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Data\\InventarioService.cs",
-              "RelativeToolTip": "LilasBoutique\\Data\\InventarioService.cs",
-              "ViewState": "AgIAAGMAAAAAAAAAAAAqwG0AAAAtAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-05T23:07:49.104Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "BodegaService.cs",
-              "DocumentMoniker": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Data\\BodegaService.cs",
-              "RelativeDocumentMoniker": "LilasBoutique\\Data\\BodegaService.cs",
-              "ToolTip": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Data\\BodegaService.cs",
-              "RelativeToolTip": "LilasBoutique\\Data\\BodegaService.cs",
-              "ViewState": "AgIAAAwAAAAAAAAAAAAYwAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-11-05T23:07:31.841Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
               "Title": "Dashboard.razor",
               "DocumentMoniker": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\Pages\\Dashboard.razor",
               "RelativeDocumentMoniker": "LilasBoutique\\Components\\Pages\\Dashboard.razor",
               "ToolTip": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\Pages\\Dashboard.razor",
               "RelativeToolTip": "LilasBoutique\\Components\\Pages\\Dashboard.razor",
-              "ViewState": "AgIAAK0AAAAAAAAAAAAIwMUAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-11-05T22:49:48.133Z"
+              "WhenOpened": "2026-11-09T18:18:42.712Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "Catalogos.razor",
-              "DocumentMoniker": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\Pages\\Catalogos.razor",
-              "RelativeDocumentMoniker": "LilasBoutique\\Components\\Pages\\Catalogos.razor",
-              "ToolTip": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\Pages\\Catalogos.razor",
-              "RelativeToolTip": "LilasBoutique\\Components\\Pages\\Catalogos.razor",
-              "ViewState": "AgIAADABAAAAAAAAAAAIwJkBAAABAAAAAAAAAA==",
+              "DocumentIndex": 1,
+              "Title": "_Imports.razor",
+              "DocumentMoniker": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\_Imports.razor",
+              "RelativeDocumentMoniker": "LilasBoutique\\Components\\_Imports.razor",
+              "ToolTip": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\_Imports.razor",
+              "RelativeToolTip": "LilasBoutique\\Components\\_Imports.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAApAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-11-05T22:38:03.628Z"
+              "WhenOpened": "2026-11-09T18:18:20.031Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 2,
-              "Title": "Bodega.razor",
-              "DocumentMoniker": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\Pages\\Bodega.razor",
-              "RelativeDocumentMoniker": "LilasBoutique\\Components\\Pages\\Bodega.razor",
-              "ToolTip": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\Pages\\Bodega.razor",
-              "RelativeToolTip": "LilasBoutique\\Components\\Pages\\Bodega.razor",
-              "ViewState": "AgIAADAAAAAAAAAAAADwv0MAAAAAAAAAAAAAAA==",
+              "Title": "App.razor",
+              "DocumentMoniker": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\App.razor",
+              "RelativeDocumentMoniker": "LilasBoutique\\Components\\App.razor",
+              "ToolTip": "C:\\Users\\Josue\\Documents\\GitHub\\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\\LilasBoutique\\Components\\App.razor",
+              "RelativeToolTip": "LilasBoutique\\Components\\App.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAA0AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-11-05T22:34:04.837Z"
+              "WhenOpened": "2026-11-09T18:10:10.652Z"
             }
           ]
         }

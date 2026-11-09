@@ -23,13 +23,14 @@
         <div class="col-md-6">
             <label class="form-label text-secondary small">Tipo de Operación</label>
             <select class="form-select" @bind="tipoOperacion">
-                <option value="RECEPCION_PROVEEDOR">Entrada (Proveedores)</option>          
+                <option value="RECEPCION_PROVEEDOR">Entrada (Proveedores)</option>
                 <option value="MERMA_DAÑO">Salida (Merma/Daño)</option>
             </select>
         </div>
         <div class="col-md-6">
             <label class="form-label text-secondary small">Cantidad Física Afectada</label>
-            <InputNumber class="form-control text-primary fw-bold" @bind-Value="cantidadAfectada" min="1" />
+            <InputNumber class="form-control text-primary fw-bold" @bind-Value="cantidadAfectada" min="1"
+                         onkeydown="if(['.','+','-','e','E',','].includes(event.key)) event.preventDefault();" />
         </div>
     </div>
 

@@ -140,7 +140,8 @@
                     </div>
 
                     <label class="form-label fw-bold">Cantidad a Vender:</label>
-                    <input type="number" @bind="cantidadVenta" class="form-control form-control-lg text-center" min="1" max="@varianteSeleccionada?.StockFisicoActual" />
+                    <input type="number" @bind="cantidadVenta" class="form-control form-control-lg text-center" min="1" max="@varianteSeleccionada?.StockFisicoActual"
+                           onkeydown="if(['.','+','-','e','E',','].includes(event.key)) event.preventDefault();" />
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" @onclick="CerrarModales">Cancelar</button>
@@ -172,7 +173,8 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Nuevo Precio de Venta (C$):</label>
-                        <input type="number" @bind="varianteSeleccionada!.Precio" class="form-control form-control-lg text-success fw-bold" min="0" step="any" />
+                        <input type="number" @bind="varianteSeleccionada!.Precio" class="form-control form-control-lg text-success fw-bold" min="0" step="any"
+                               onkeydown="if(['+','-','e','E'].includes(event.key)) event.preventDefault();" />
                     </div>
                 </div>
                 <div class="modal-footer bg-light">

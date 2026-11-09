@@ -83,15 +83,18 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label small">Precio (C$) <span class="text-danger">*</span></label>
-                        <InputNumber @bind-Value="precioTemporal" class="form-control" min="0" />
+                        <InputNumber @bind-Value="precioTemporal" class="form-control" min="0" step="0.01"
+                                     onkeydown="if(['+','-','e','E'].includes(event.key)) event.preventDefault();" />
                     </div>
                     <div class="col-md-6 mt-2">
                         <label class="form-label small fw-semibold text-success">Stock Inicial (Unidades)</label>
-                        <InputNumber @bind-Value="varianteActual.StockFisicoActual" class="form-control border-success" min="0" />
+                        <InputNumber @bind-Value="varianteActual.StockFisicoActual" class="form-control border-success" min="0"
+                                     onkeydown="if(['.','+','-','e','E',','].includes(event.key)) event.preventDefault();" />
                     </div>
                     <div class="col-md-6 mt-2">
                         <label class="form-label small fw-semibold text-warning">Alerta Desabastecimiento</label>
-                        <InputNumber @bind-Value="varianteActual.LimiteAlerta" class="form-control border-warning" min="0" />
+                        <InputNumber @bind-Value="varianteActual.LimiteAlerta" class="form-control border-warning" min="0"
+                                     onkeydown="if(['.','+','-','e','E',','].includes(event.key)) event.preventDefault();" />
                     </div>
                     <div class="col-12 mt-3">
                         <button class="btn btn-outline-primary w-100" @onclick="AgregarVariante">

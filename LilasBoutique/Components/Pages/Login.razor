@@ -60,24 +60,34 @@
 </div>
 
 @code {
+    #region Variables y Modelos
+
     [SupplyParameterFromForm]
     public LoginDTO loginModel { get; set; } = new();
 
     private string mensajeError = "";
 
+    #endregion
+
+    #region Lógica de Autenticación
+
+    /// <summary>
+    /// Valida las credenciales contra la base de datos (Hash de BCrypt) e inicia
+    /// la sesión en el cliente (Cookie + AuthState) redirigiendo forzadamente según el rol.
+    /// </summary>
     private async Task ValidarLogin()
     {
         var usuario = await AuthService.ObtenerUsuarioPorCorreo(loginModel.Correo);
 
         if (usuario != null && usuario.EstadoActivo && BCrypt.Net.BCrypt.Verify(loginModel.Password, usuario.HashCredencial))
         {
-            // 1. Guardamos la cookie
+            // Guardamos la cookie (Persistencia JS)
             await JS.InvokeVoidAsync("eval", $"document.cookie = 'lila_user={usuario.Correo}; path=/; max-age=604800; samesite=strict';");
 
-            // 2. Actualizamos la memoria
+            // Actualizamos la memoria (Circuito Blazor)
             await AuthStateProvider.ActualizarEstadoAutenticacion(usuario);
 
-            // 3. REDIRIGIMOS CON forceLoad: true PARA QUE EL SERVIDOR LEA LA COOKIE AL INSTANTE
+            // Redirección con Carga Forzada para sincronizar el cerebro de SignalR
             if (usuario.Rol.NombreRol == "Administrador")
                 Navigation.NavigateTo("/dashboard", forceLoad: true);
             else if (usuario.Rol.NombreRol == "Vendedor")
@@ -91,13 +101,30 @@
         }
     }
 
-    private async Task MostrarError(string mensaje)
+    #endregion
+
+    #region Notificaciones UI
+
+    /// <summary>
+    /// Despliega un mensaje de error que se oculta automáticamente.
+    /// </summary>
+    private Task MostrarError(string mensaje)
     {
         mensajeError = mensaje;
         StateHasChanged();
 
-        await Task.Delay(5000);
-        mensajeError = string.Empty;
-        StateHasChanged();
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(5000);
+            await InvokeAsync(() =>
+            {
+                mensajeError = string.Empty;
+                StateHasChanged();
+            });
+        });
+
+        return Task.CompletedTask;
     }
+
+    #endregion
 }

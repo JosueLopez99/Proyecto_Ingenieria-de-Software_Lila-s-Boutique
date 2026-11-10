@@ -48,7 +48,8 @@
         <div class="col-md-2">
             <label class="form-label small fw-bold text-secondary mb-1">Precio Máx (C$)</label>
             <div class="input-group input-group-sm shadow-sm">
-                <input type="number" class="form-control" placeholder="0.00" min="0" @bind="filtroPrecioMax" @bind:event="oninput" />
+                <!-- Se agregó la clase global 'solo-enteros' -->
+                <input type="number" class="form-control solo-enteros" placeholder="0.00" min="0" @bind="filtroPrecioMax" @bind:event="oninput" />
                 <button class="btn btn-danger" type="button" title="Limpiar Todos los Filtros" @onclick="LimpiarFiltros">
                     <i class="bi bi-x-circle-fill"></i>
                 </button>
@@ -56,7 +57,7 @@
         </div>
     </div>
 
-
+    <!-- ================= TABLA DE CATÁLOGO ================= -->
     <div class="table-responsive">
         <ErrorBoundary>
             <ChildContent>
@@ -173,8 +174,8 @@
                     </div>
 
                     <label class="form-label fw-bold">Cantidad a Vender:</label>
-                    <input type="number" @bind="cantidadVenta" class="form-control form-control-lg text-center" min="1" max="@varianteSeleccionada?.StockFisicoActual"
-                           onkeydown="if(['.','+','-','e','E',','].includes(window.event.key)) window.event.preventDefault();" />
+                    <!-- Se agregó la clase global 'solo-enteros' -->
+                    <input type="number" @bind="cantidadVenta" class="form-control form-control-lg text-center solo-enteros" min="1" max="@varianteSeleccionada?.StockFisicoActual" />
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" @onclick="CerrarModales">Cancelar</button>
@@ -206,8 +207,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Nuevo Precio de Venta (C$):</label>
-                        <input type="number" @bind="varianteSeleccionada!.Precio" class="form-control form-control-lg text-success fw-bold" min="0" step="any"
-                               onkeydown="if(['+','-','e','E'].includes(window.event.key)) window.event.preventDefault();" />
+                        <input type="number" @bind="varianteSeleccionada!.Precio" class="form-control form-control-lg text-success fw-bold solo-enteros" min="0" step="any" />
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
@@ -244,16 +244,30 @@
 }
 
 @code {
+    #region Variables de Estado y UI
     private string mensajeNotificacion = "";
     private bool esError = false;
     private bool cargando = true;
+
+    // RBAC Variables
     private bool esAdministrador = false;
     private bool puedeVender = false;
+    private string correoUsuarioActual = "";
 
+    // Data Sources
     private List<VariantePrenda> catalogoCompleto = new();
     private List<VariantePrenda> catalogoFiltrado = new();
 
-    // ================= VARIABLES PARA LOS FILTROS INDEPENDIENTES =================
+    // Modal Variables
+    private bool mostrarModalVenta = false;
+    private bool mostrarModalEdicion = false;
+    private bool mostrarModalEliminacion = false;
+    private VariantePrenda varianteSeleccionada = new();
+    private int idVarianteAEliminar = 0;
+    private int cantidadVenta = 1;
+    #endregion
+
+    #region Variables de Filtros Independientes
     private string _filtroCodigo = "";
     private string filtroCodigo { get => _filtroCodigo; set { _filtroCodigo = value; FiltrarCatalogo(); } }
 
@@ -271,17 +285,12 @@
 
     private decimal? _filtroPrecioMax = null;
     private decimal? filtroPrecioMax { get => _filtroPrecioMax; set { _filtroPrecioMax = value; FiltrarCatalogo(); } }
-    // ============================================================================
+    #endregion
 
-    private bool mostrarModalVenta = false;
-    private bool mostrarModalEdicion = false;
-    private bool mostrarModalEliminacion = false;
-    private VariantePrenda varianteSeleccionada = new();
-    private int idVarianteAEliminar = 0;
-    private int cantidadVenta = 1;
-
-    private string correoUsuarioActual = "";
-
+    #region Ciclo de Vida del Componente
+    /// <summary>
+    /// Se ejecuta al inicializar el componente. Configura el estado de autenticación y los permisos RBAC.
+    /// </summary>
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -295,6 +304,10 @@
         }
     }
 
+    /// <summary>
+    /// Se ejecuta después del primer renderizado. Carga los datos pesados del catálogo
+    /// para evitar bloquear la carga inicial de la UI.
+    /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -314,7 +327,12 @@
             }
         }
     }
+    #endregion
 
+    #region Lógica de Negocio y Filtrado
+    /// <summary>
+    /// Aplica todos los filtros activos sobre la lista en memoria del catálogo completo.
+    /// </summary>
     private void FiltrarCatalogo()
     {
         if (catalogoCompleto == null) return;
@@ -342,6 +360,9 @@
         catalogoFiltrado = consulta.ToList();
     }
 
+    /// <summary>
+    /// Reinicia todos los filtros a su estado por defecto y recarga la tabla completa.
+    /// </summary>
     private void LimpiarFiltros()
     {
         _filtroCodigo = "";
@@ -353,18 +374,9 @@
         FiltrarCatalogo();
     }
 
-    private async Task AbrirModalVenta(VariantePrenda variante)
-    {
-        if (variante.StockFisicoActual <= 0)
-        {
-            await MostrarMensaje("No hay stock disponible para vender esta prenda.", true);
-            return;
-        }
-        varianteSeleccionada = variante;
-        cantidadVenta = 1;
-        mostrarModalVenta = true;
-    }
-
+    /// <summary>
+    /// Procesa la venta de la variante seleccionada, descontando el stock y generando un registro histórico.
+    /// </summary>
     private async Task ConfirmarVenta()
     {
         if (cantidadVenta <= 0)
@@ -382,10 +394,9 @@
         try
         {
             await InventarioService.RegistrarVenta(varianteSeleccionada.IdVariante, cantidadVenta, correoUsuarioActual);
-
             await MostrarMensaje($"¡Venta registrada exitosamente! Se descontaron {cantidadVenta} unidades.", false);
-            CerrarModales();
 
+            CerrarModales();
             catalogoCompleto = await InventarioService.ObtenerCatalogo();
             FiltrarCatalogo();
         }
@@ -395,24 +406,9 @@
         }
     }
 
-    private void AbrirModalEdicion(VariantePrenda variante)
-    {
-        varianteSeleccionada = new VariantePrenda
-        {
-            IdVariante = variante.IdVariante,
-            Precio = variante.Precio,
-            PrendaId = variante.PrendaId,
-            Prenda = new Prenda
-            {
-                IdPrenda = variante.Prenda?.IdPrenda ?? 0,
-                CodigoIdentificador = variante.Prenda?.CodigoIdentificador ?? "",
-                Marca = variante.Prenda?.Marca ?? "",
-                CategoriaId = variante.Prenda?.CategoriaId ?? 0
-            }
-        };
-        mostrarModalEdicion = true;
-    }
-
+    /// <summary>
+    /// Actualiza los detalles de la variante seleccionada en la base de datos (Precio, Marca, Código).
+    /// </summary>
     private async Task ConfirmarEdicion()
     {
         if (string.IsNullOrWhiteSpace(varianteSeleccionada?.Prenda?.CodigoIdentificador))
@@ -435,10 +431,10 @@
 
         try
         {
-            await InventarioService.ActualizarVariante(varianteSeleccionada);
+            await InventarioService.ActualizarVariante(varianteSeleccionada!);
             await MostrarMensaje("¡Prenda y precio actualizados correctamente!", false);
-            CerrarModales();
 
+            CerrarModales();
             catalogoCompleto = await InventarioService.ObtenerCatalogo();
             FiltrarCatalogo();
         }
@@ -448,20 +444,17 @@
         }
     }
 
-    private void IniciarEliminacion(int id)
-    {
-        idVarianteAEliminar = id;
-        mostrarModalEliminacion = true;
-    }
-
+    /// <summary>
+    /// Elimina de forma lógica o permanente una variante del catálogo, dependiendo del historial de stock.
+    /// </summary>
     private async Task EjecutarEliminacion()
     {
         try
         {
             await InventarioService.EliminarVariante(idVarianteAEliminar);
-            CerrarModales();
             await MostrarMensaje("¡El registro fue eliminado exitosamente del catálogo!", false);
 
+            CerrarModales();
             catalogoCompleto = await InventarioService.ObtenerCatalogo();
             FiltrarCatalogo();
         }
@@ -471,6 +464,45 @@
             await MostrarMensaje("No se puede eliminar: Esta prenda ya tiene un historial de movimientos en bodega.", true);
         }
     }
+    #endregion
+
+    #region Control de Modales y Notificaciones
+    private async Task AbrirModalVenta(VariantePrenda variante)
+    {
+        if (variante.StockFisicoActual <= 0)
+        {
+            await MostrarMensaje("No hay stock disponible para vender esta prenda.", true);
+            return;
+        }
+        varianteSeleccionada = variante;
+        cantidadVenta = 1;
+        mostrarModalVenta = true;
+    }
+
+    private void AbrirModalEdicion(VariantePrenda variante)
+    {
+        // Se clona el objeto para no afectar la UI principal si el usuario cancela la edición
+        varianteSeleccionada = new VariantePrenda
+        {
+            IdVariante = variante.IdVariante,
+            Precio = variante.Precio,
+            PrendaId = variante.PrendaId,
+            Prenda = new Prenda
+            {
+                IdPrenda = variante.Prenda?.IdPrenda ?? 0,
+                CodigoIdentificador = variante.Prenda?.CodigoIdentificador ?? "",
+                Marca = variante.Prenda?.Marca ?? "",
+                CategoriaId = variante.Prenda?.CategoriaId ?? 0
+            }
+        };
+        mostrarModalEdicion = true;
+    }
+
+    private void IniciarEliminacion(int id)
+    {
+        idVarianteAEliminar = id;
+        mostrarModalEliminacion = true;
+    }
 
     private void CerrarModales()
     {
@@ -479,6 +511,9 @@
         mostrarModalEliminacion = false;
     }
 
+    /// <summary>
+    /// Muestra un Toast asíncrono que desaparece tras 4 segundos sin bloquear la UI.
+    /// </summary>
     private Task MostrarMensaje(string msj, bool error)
     {
         mensajeNotificacion = msj;
@@ -497,4 +532,5 @@
 
         return Task.CompletedTask;
     }
+    #endregion
 }

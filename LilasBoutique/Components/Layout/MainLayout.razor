@@ -10,6 +10,7 @@
     </div>
 
     <main>
+        <!-- Barra Superior (Top-Row) -->
         <div class="top-row px-4 d-flex justify-content-between align-items-center bg-white shadow-sm mb-3">
             <AuthorizeView>
                 <Authorized>
@@ -22,7 +23,7 @@
             </AuthorizeView>
 
             <div class="d-flex align-items-center">
-                <!-- Botón de Cambio de Tema (Modo Oscuro/Claro) -->
+                <!-- Botón de Modo Oscuro -->
                 <button class="btn btn-outline-secondary border-0 rounded-circle me-3" @onclick="ToggleTheme" title="Cambiar tema">
                     <i class="bi @(isDarkMode ? "bi-sun-fill text-warning" : "bi-moon-stars-fill text-dark") fs-5"></i>
                 </button>
@@ -38,27 +39,43 @@
 </div>
 
 <div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
+    Ha ocurrido un error inesperado.
+    <a href="" class="reload">Recargar Página</a>
     <a class="dismiss">🗙</a>
 </div>
+
 @code {
+    #region Variables y Ciclo de Vida
+
     private bool isDarkMode = false;
 
+    /// <summary>
+    /// Se dispara cuando el componente ha sido dibujado.
+    /// Recupera la preferencia del tema visual desde LocalStorage (JS).
+    /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Sincronizar únicamente el Modo Oscuro al recargar o abrir
             var theme = await JS.InvokeAsync<string>("localStorage.getItem", "theme");
             isDarkMode = theme == "dark";
             StateHasChanged();
         }
     }
 
+    #endregion
+
+    #region Lógica de Interfaz
+
+    /// <summary>
+    /// Invoca el script global de JavaScript para intercambiar las propiedades
+    /// CSS de Bootstrap (data-bs-theme).
+    /// </summary>
     private async Task ToggleTheme()
     {
         isDarkMode = !isDarkMode;
         await JS.InvokeVoidAsync("setModoOscuro", isDarkMode);
     }
+
+    #endregion
 }

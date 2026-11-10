@@ -2,9 +2,14 @@
 
 namespace LilasBoutique.DTOs
 {
- 
+    /// <summary>
+    /// Objeto de Transferencia de Datos (DTO) utilizado para validar 
+    /// los formularios de actualización de contraseñas de los usuarios.
+    /// </summary>
     public class CambioContraseñaDTO
     {
+        #region Propiedades de Formulario
+
         [Required(ErrorMessage = "Ingrese su contraseña actual")]
         public string Actual { get; set; } = string.Empty;
 
@@ -15,5 +20,7 @@ namespace LilasBoutique.DTOs
         [Required(ErrorMessage = "Confirme la contraseña")]
         [Compare("Nueva", ErrorMessage = "Las contraseñas no coinciden")]
         public string Confirmacion { get; set; } = string.Empty;
+
+        #endregion
     }
 }

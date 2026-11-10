@@ -7,25 +7,28 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+#region 1. Configuración de Componentes y Base de Datos
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Registro del DbContext
+// Registro del DbContext (EF Core)
 builder.Services.AddDbContext<LilaBoutiqueContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+#endregion
 
-// Registro de la capa lógica (Servicios)
+#region 2. Inyección de Dependencias (Servicios Scoped)
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IInventarioService, InventarioService>();
 builder.Services.AddScoped<IBodegaService, BodegaService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+#endregion
 
-// 1. Contexto HTTP necesario para leer/escribir cookies de sesión en F5
+#region 3. Autenticación, Autorización y Estado (RBAC)
+// 3.1. Contexto HTTP necesario para leer/escribir cookies de sesión al recargar página (F5)
 builder.Services.AddHttpContextAccessor();
 
-// 2. Configuración de autenticación por Cookies nativa de ASP.NET Core
+// 3.2. Configuración de autenticación por Cookies nativa de ASP.NET Core
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -33,27 +36,30 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
     });
 
-// 3. Proveedor de autenticación personalizado
+// 3.3. Proveedor de autenticación personalizado (Conecta Blazor SignalR con las Cookies)
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
     provider.GetRequiredService<CustomAuthenticationStateProvider>());
 
-// 4. Autorización y cascada de estado
+// 3.4. Autorización y cascada de estado
 builder.Services.AddAuthorizationCore();
 builder.Services.AddCascadingAuthenticationState();
+#endregion
 
-// 5. Configuraciones de Blazor Server
+#region 4. Configuraciones Adicionales
+// Detalles de errores para Blazor Server 
 builder.Services.AddServerSideBlazor(options =>
 {
     options.DetailedErrors = true;
 });
 
-// 6. Antiforgery configurado en la fase de servicios
+// Antiforgery configurado en la fase de servicios
 builder.Services.AddAntiforgery();
+#endregion
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+#region 5. Pipeline de Solicitudes HTTP (Middlewares)
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -61,26 +67,25 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
 app.UseRouting();
 
-// ⚠️ IMPORTANTÍSIMO: Estos dos middlewares deben estar aquí para procesar la cookie en cada F5
+// Importante!: Orden estricto para procesar la seguridad
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode().DisableAntiforgery();
+#endregion
 
-// ==========================================
-// SEMBRADO DE DATOS (Data Seeding)
-// ==========================================
+#region 6. Sembrado de Datos (Data Seeding)
+// Crea un Scope para insertar Roles y Usuarios básicos si la base de datos está vacía.
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<LilaBoutiqueContext>();
 
+    // Crear Roles Iniciales
     if (!context.Rol.Any())
     {
         context.Rol.AddRange(
@@ -97,6 +102,7 @@ using (var scope = app.Services.CreateScope())
 
     var nuevosUsuarios = new List<Usuario>();
 
+    // Sembrar Administrador Default
     if (rolAdmin != null && !context.Usuario.Any(u => u.Correo == "admin@lilasboutique.com"))
     {
         nuevosUsuarios.Add(new Usuario
@@ -108,6 +114,7 @@ using (var scope = app.Services.CreateScope())
         });
     }
 
+    // Sembrar Vendedor Default
     if (rolVendedor != null && !context.Usuario.Any(u => u.Correo == "vendedor@lilasboutique.com"))
     {
         nuevosUsuarios.Add(new Usuario
@@ -119,6 +126,7 @@ using (var scope = app.Services.CreateScope())
         });
     }
 
+    // Sembrar Bodeguero Default
     if (rolBodeguero != null && !context.Usuario.Any(u => u.Correo == "bodeguero@lilasboutique.com"))
     {
         nuevosUsuarios.Add(new Usuario
@@ -130,12 +138,13 @@ using (var scope = app.Services.CreateScope())
         });
     }
 
+    // Insertar en Base de Datos
     if (nuevosUsuarios.Any())
     {
         context.Usuario.AddRange(nuevosUsuarios);
         context.SaveChanges();
     }
 }
-// ==========================================
+#endregion
 
 app.Run();

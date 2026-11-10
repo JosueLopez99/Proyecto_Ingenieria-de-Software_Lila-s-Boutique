@@ -1,4 +1,5 @@
 ﻿@using LilasBoutique.Data
+
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="dashboard">Lila's Boutique</a>
@@ -10,6 +11,7 @@
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
 
+        <!-- DASHBOARD (Solo Admin) -->
         <AuthorizeView Roles="Administrador">
             <Authorized>
                 <div class="nav-item px-3">
@@ -20,6 +22,7 @@
             </Authorized>
         </AuthorizeView>
 
+        <!-- CATÁLOGOS (Admin, Vendedor, Bodeguero) -->
         <AuthorizeView Roles="Administrador, Vendedor, Bodeguero">
             <Authorized>
                 <div class="nav-item px-3">
@@ -30,6 +33,7 @@
             </Authorized>
         </AuthorizeView>
 
+        <!-- BODEGA (Admin, Bodeguero) -->
         <AuthorizeView Roles="Administrador, Bodeguero">
             <Authorized>
                 <div class="nav-item px-3">
@@ -40,6 +44,7 @@
             </Authorized>
         </AuthorizeView>
 
+        <!-- GESTIÓN GENERAL (Solo Admin) -->
         <AuthorizeView Roles="Administrador">
             <Authorized>
                 <div class="nav-item px-3">
@@ -60,6 +65,7 @@
             </Authorized>
         </AuthorizeView>
 
+        <!-- SEGURIDAD Y CIERRE DE SESIÓN (Todos los usuarios autenticados) -->
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3 mt-4 border-top pt-2 border-secondary">
@@ -77,6 +83,7 @@
 
     </nav>
 </div>
+
 @inject IJSRuntime JS
 @code {
     [Inject]
@@ -85,14 +92,19 @@
     [Inject]
     private NavigationManager Navigation { get; set; } = default!;
 
+    /// <summary>
+    /// Finaliza la sesión actual limpiando el circuito Blazor y destruyendo
+    /// la cookie del navegador vía JS, forzando una recarga de página al Login.
+    /// </summary>
     private async Task CerrarSesion()
     {
-        // Borramos la cookie
+        // 1. Borramos la cookie de sesión nativamente
         await JS.InvokeVoidAsync("eval", "document.cookie = 'lila_user=; path=/; max-age=0;';");
 
+        // 2. Limpiamos la memoria del servidor de Blazor
         await AuthStateProvider.ActualizarEstadoAutenticacion(null);
 
-        // Redirigimos forzando la recarga para limpiar el circuito del servidor
+        // 3. Forzamos la recarga al login para limpiar completamente el circuito
         Navigation.NavigateTo("/", forceLoad: true);
     }
 }

@@ -24,6 +24,9 @@ h1:focus {
     outline: none;
 }
 
+/* ==================================================
+   VALIDADORES DE FORMULARIOS BLAZOR
+================================================== */
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
 }
@@ -43,15 +46,11 @@ h1:focus {
 }
 
     .blazor-error-boundary::after {
-        content: "An error has occurred."
+        content: "Ha ocurrido un error en este componente.";
     }
 
-.darker-border-checkbox.form-check-input {
-    border-color: #929292;
-}
-
 /* ==================================================
-   1. Transiciones suaves y acabados premium
+   1. TRANSICIONES Y ACABADOS PREMIUM
 ================================================== */
 body, .card, .btn, .form-control, .modal-content, .form-select, h3, h4, h5, h6, label {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
@@ -67,14 +66,13 @@ body, .card, .btn, .form-control, .modal-content, .form-select, h3, h4, h5, h6, 
 }
 
 /* ==================================================
-   2. Reglas Inteligentes del Modo Oscuro (Bootstrap 5)
+   2. REGLAS INTELIGENTES MODO OSCURO (BOOTSTRAP 5)
 ================================================== */
 [data-bs-theme="dark"] body {
     background-color: #121212 !important;
     color: #e0e0e0 !important;
 }
 
-/* Forzar fondos oscuros en contenedores principales y elementos rebeldes */
 [data-bs-theme="dark"] .card,
 [data-bs-theme="dark"] .modal-content,
 [data-bs-theme="dark"] .top-row,
@@ -89,9 +87,7 @@ body, .card, .btn, .form-control, .modal-content, .form-select, h3, h4, h5, h6, 
     border-color: #333 !important;
 }
 
-/* -----------------------------------------------------
-   FORZAR TEXTOS CLAROS (Solución a textos invisibles)
------------------------------------------------------- */
+/* Forzar contraste de textos claros */
 [data-bs-theme="dark"] .text-dark,
 [data-bs-theme="dark"] .text-secondary,
 [data-bs-theme="dark"] .text-muted,
@@ -102,14 +98,14 @@ body, .card, .btn, .form-control, .modal-content, .form-select, h3, h4, h5, h6, 
 [data-bs-theme="dark"] strong,
 [data-bs-theme="dark"] label,
 [data-bs-theme="dark"] i.text-muted,
-[data-bs-theme="dark"] td, /* Forzar todo el texto suelto de las celdas */
-[data-bs-theme="dark"] tr, /* Forzar todo el texto de las filas */
-[data-bs-theme="dark"] li, /* Forzar listas (Categorías, tallas, etc) */
-[data-bs-theme="dark"] span { /* Forzar spans genéricos */
+[data-bs-theme="dark"] td,
+[data-bs-theme="dark"] tr,
+[data-bs-theme="dark"] li,
+[data-bs-theme="dark"] span {
     color: #e0e0e0 !important;
 }
 
-/* Excepción: Mantener colores vivos en insignias (badges) y textos semánticos */
+/* Excepciones Semánticas */
 [data-bs-theme="dark"] .text-primary {
     color: #3b82f6 !important;
 }
@@ -126,7 +122,7 @@ body, .card, .btn, .form-control, .modal-content, .form-select, h3, h4, h5, h6, 
     color: #f59e0b !important;
 }
 
-/* Arreglar el fondo de las tablas */
+/* Corrección de Tablas en Modo Oscuro */
 [data-bs-theme="dark"] .table {
     --bs-table-bg: transparent;
     --bs-table-color: #e0e0e0;
@@ -142,7 +138,7 @@ body, .card, .btn, .form-control, .modal-content, .form-select, h3, h4, h5, h6, 
         border-bottom: 2px solid #555 !important;
     }
 
-/* Arreglar inputs en modo oscuro para que se lean bien */
+/* Corrección de Inputs */
 [data-bs-theme="dark"] .form-control,
 [data-bs-theme="dark"] .form-select {
     background-color: #2c2c2c !important;
@@ -158,7 +154,7 @@ body, .card, .btn, .form-control, .modal-content, .form-select, h3, h4, h5, h6, 
     }
 
 /* ==================================================
-   3. Diseño de la Notificación Flotante (Toast)
+   3. ANIMACIÓN Y DISEÑO DEL TOAST (MENSAJES)
 ================================================== */
 @keyframes slideInRight {
     from {

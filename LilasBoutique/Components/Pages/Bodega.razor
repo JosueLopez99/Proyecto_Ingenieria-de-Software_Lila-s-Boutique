@@ -32,8 +32,8 @@
         </div>
         <div class="col-md-6">
             <label class="form-label text-secondary small">Cantidad Física Afectada</label>
-            <InputNumber class="form-control text-primary fw-bold" @bind-Value="cantidadAfectada" min="1"
-                         onkeydown="if(['.','+','-','e','E',','].includes(event.key)) event.preventDefault();" />
+            <!-- Validación nativa corregida usando window.event para evitar advertencias de Visual Studio -->
+            <InputNumber class="form-control text-primary fw-bold solo-enteros" @bind-Value="cantidadAfectada" min="1" />
         </div>
     </div>
 
@@ -71,6 +71,8 @@
 </div>
 
 @code {
+    #region Variables de Estado
+
     private string mensajeNotificacion = "";
     private bool esError = false;
 
@@ -84,6 +86,10 @@
     private List<VariantePrenda> variantesFiltradas = new();
 
     private string _textoBusqueda = "";
+
+    /// <summary>
+    /// Propiedad que detecta cambios en el input de búsqueda y dispara el filtrado automáticamente.
+    /// </summary>
     private string TextoBusqueda
     {
         get => _textoBusqueda;
@@ -94,6 +100,14 @@
         }
     }
 
+    #endregion
+
+    #region Ciclo de Vida del Componente
+
+    /// <summary>
+    /// Se ejecuta al inicializar el componente.
+    /// Verifica los permisos de rol (RBAC) y carga el catálogo completo en memoria.
+    /// </summary>
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -118,6 +132,14 @@
         }
     }
 
+    #endregion
+
+    #region Lógica de Negocio
+
+    /// <summary>
+    /// Filtra la lista desplegable de variantes basándose en la marca, categoría o color
+    /// ingresados en el campo de búsqueda.
+    /// </summary>
     private void FiltrarVariantes()
     {
         if (string.IsNullOrWhiteSpace(TextoBusqueda))
@@ -134,25 +156,33 @@
             ).ToList();
         }
 
+        // Si la variante previamente seleccionada desaparece por el filtro, se reinicia la selección
         if (!variantesFiltradas.Any(v => v.IdVariante == varianteSeleccionadaId))
         {
             varianteSeleccionadaId = 0;
         }
     }
 
+    /// <summary>
+    /// Ejecuta las validaciones de negocio y envía los datos al servicio para impactar
+    /// el stock en la base de datos, generando un registro de auditoría (Kardex).
+    /// </summary>
     private async Task ProcesarMovimiento()
     {
         if (varianteSeleccionadaId == 0)
         {
-            await MostrarMensaje("Debe seleccionar una variante del catálogo.", true); return;
+            await MostrarMensaje("Debe seleccionar una variante del catálogo.", true);
+            return;
         }
         if (cantidadAfectada <= 0)
         {
-            await MostrarMensaje("La cantidad afectada debe ser mayor a cero.", true); return;
+            await MostrarMensaje("La cantidad afectada debe ser mayor a cero.", true);
+            return;
         }
         if (string.IsNullOrWhiteSpace(justificacion))
         {
-            await MostrarMensaje("Debe ingresar una justificación para este movimiento.", true); return;
+            await MostrarMensaje("Debe ingresar una justificación para este movimiento.", true);
+            return;
         }
 
         try
@@ -162,9 +192,11 @@
             string nombreOp = tipoOperacion == "RECEPCION_PROVEEDOR" ? "sumado" : "restado";
             await MostrarMensaje($"Movimiento registrado exitosamente. Se ha {nombreOp} {cantidadAfectada} al stock.", false);
 
+            // Se refresca el inventario en pantalla
             catalogoCompleto = await InventarioService.ObtenerCatalogo();
             FiltrarVariantes();
 
+            // Limpieza del formulario
             cantidadAfectada = 0;
             justificacion = "";
             varianteSeleccionadaId = 0;
@@ -181,27 +213,37 @@
         }
     }
 
+    #endregion
+
+    #region Control de Interfaz y Notificaciones
+
+    /// <summary>
+    /// Muestra un mensaje flotante (Toast) en la interfaz y lo oculta automáticamente
+    /// después de 4 segundos utilizando un hilo en segundo plano para no congelar la UI.
+    /// </summary>
+    /// <param name="msj">Texto del mensaje a mostrar.</param>
+    /// <param name="error">Define si el mensaje es de éxito (false) o de error (true).</param>
     private Task MostrarMensaje(string msj, bool error)
     {
         mensajeNotificacion = msj;
         esError = error;
         StateHasChanged();
 
-        if (!error)
+        // Ejecuta el temporizador en segundo plano sin bloquear el flujo principal.
+        // Se aplica tanto a errores como a éxitos para mantener la pantalla siempre limpia.
+        _ = Task.Run(async () =>
         {
-            // Ejecuta el temporizador en segundo plano sin bloquear el flujo principal
-            _ = Task.Run(async () =>
+            await Task.Delay(4000);
+            await InvokeAsync(() =>
             {
-                await Task.Delay(4000);
-                await InvokeAsync(() =>
-                {
-                    mensajeNotificacion = string.Empty;
-                    StateHasChanged();
-                });
+                mensajeNotificacion = string.Empty;
+                StateHasChanged();
             });
-        }
+        });
 
-        // Retorna de inmediato para que el modal se cierre y la tabla se actualice al instante
+        // Retorna de inmediato para que cualquier proceso (como cerrar modales) continúe al instante.
         return Task.CompletedTask;
     }
+
+    #endregion
 }

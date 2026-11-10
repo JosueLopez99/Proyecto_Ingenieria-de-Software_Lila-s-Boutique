@@ -9,6 +9,7 @@ namespace LilasBoutique.Data
 {
     public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     {
+        #region Inyección y Variables Privadas
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IServiceScopeFactory _scopeFactory;
 
@@ -17,7 +18,13 @@ namespace LilasBoutique.Data
             _httpContextAccessor = httpContextAccessor;
             _scopeFactory = scopeFactory;
         }
+        #endregion
 
+        #region Métodos de Estado
+        /// <summary>
+        /// Método interceptor de Blazor. Verifica cada vez que un componente lo solicita
+        /// si existe una Cookie válida del navegador y si el usuario sigue activo en Base de Datos.
+        /// </summary>
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
             ClaimsPrincipal principal;
@@ -27,6 +34,7 @@ namespace LilasBoutique.Data
                 var httpContext = _httpContextAccessor.HttpContext;
                 if (httpContext?.Request.Cookies.TryGetValue("lila_user", out var correo) == true && !string.IsNullOrEmpty(correo))
                 {
+                    // Scope independiente porque GetAuthenticationStateAsync puede chocar con transacciones DB activas
                     using var scope = _scopeFactory.CreateScope();
                     var context = scope.ServiceProvider.GetRequiredService<LilaBoutiqueContext>();
 
@@ -51,13 +59,17 @@ namespace LilasBoutique.Data
             }
             catch
             {
-                // Si ocurre algún error, retorna anónimo
+                // Si ocurre un error de base de datos o de contexto HTTP, el sistema por seguridad asume usuario Anónimo
             }
 
             principal = new ClaimsPrincipal(new ClaimsIdentity());
             return new AuthenticationState(principal);
         }
 
+        /// <summary>
+        /// Informa inmediatamente a Blazor que un usuario ha iniciado o cerrado sesión 
+        /// para repintar la UI (Mostrar/Ocultar Menús laterales).
+        /// </summary>
         public Task ActualizarEstadoAutenticacion(Usuario? usuario)
         {
             ClaimsPrincipal principal;
@@ -82,5 +94,6 @@ namespace LilasBoutique.Data
             NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(principal)));
             return Task.CompletedTask;
         }
+        #endregion
     }
 }

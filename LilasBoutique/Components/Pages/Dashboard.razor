@@ -132,14 +132,24 @@ else
 </div>
 
 @code {
+    #region Variables de Estado y Servicios
+
     private decimal ValorTotalInventario;
     private List<VariantePrenda> alertasDesabastecimiento = new();
     private List<MovimientoAuditoria> listaAuditoria = new();
 
-    // Variables para el tiempo real
+    // Variables para el tiempo real (SignalR optimizado)
     private PeriodicTimer? _timer;
     private CancellationTokenSource _cts = new();
 
+    #endregion
+
+    #region Ciclo de Vida y Seguridad
+
+    /// <summary>
+    /// Se ejecuta al cargar el Dashboard. Valida el rol del usuario,
+    /// carga los datos iniciales e inicia el ciclo de vida en tiempo real.
+    /// </summary>
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -153,13 +163,28 @@ else
             return;
         }
 
-        // Carga inicial de datos
         await CargarDatosDashboard();
-
-        // Iniciar el temporizador para actualizar en tiempo real
         IniciarActualizacionEnTiempoReal();
     }
 
+    /// <summary>
+    /// Limpia los recursos y detiene el temporizador cuando el usuario abandona la página,
+    /// previniendo fugas de memoria en Blazor Server.
+    /// </summary>
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _timer?.Dispose();
+    }
+
+    #endregion
+
+    #region Lógica de Negocio y Datos
+
+    /// <summary>
+    /// Consume el servicio de Dashboard para recalcular métricas, obtener alertas
+    /// y traer el historial de operaciones de la base de datos.
+    /// </summary>
     private async Task CargarDatosDashboard()
     {
         ValorTotalInventario = await DashboardService.CalcularValorInventario();
@@ -167,9 +192,12 @@ else
         listaAuditoria = await DashboardService.ObtenerAuditoriaReciente();
     }
 
+    /// <summary>
+    /// Inicia un bucle asíncrono que actualiza los datos en pantalla cada 5 segundos
+    /// de forma silenciosa.
+    /// </summary>
     private async void IniciarActualizacionEnTiempoReal()
     {
-        // Configura el refresco cada 5 segundos
         _timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
 
         try
@@ -177,21 +205,14 @@ else
             while (await _timer.WaitForNextTickAsync(_cts.Token))
             {
                 await CargarDatosDashboard();
-
-                // Le indica a Blazor que debe repintar la pantalla con los nuevos datos
                 await InvokeAsync(StateHasChanged);
             }
         }
         catch (OperationCanceledException)
         {
-            // El ciclo se cancela limpiamente cuando el usuario sale de la página
+            // El ciclo se cancela de forma controlada en el Dispose()
         }
     }
 
-    // Libera la memoria y apaga el ciclo al cambiar de pestaña
-    public void Dispose()
-    {
-        _cts.Cancel();
-        _timer?.Dispose();
-    }
+    #endregion
 }

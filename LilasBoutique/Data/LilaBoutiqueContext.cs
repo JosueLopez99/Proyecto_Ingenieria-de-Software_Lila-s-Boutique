@@ -8,6 +8,7 @@ namespace LilasBoutique.Data
     {
         public LilaBoutiqueContext(DbContextOptions<LilaBoutiqueContext> options) : base(options) { }
 
+        #region DbSets
         public DbSet<Categoria> Categoria { get; set; }
         public DbSet<Talla> Talla { get; set; }
         public DbSet<Color> Color { get; set; }
@@ -16,14 +17,13 @@ namespace LilasBoutique.Data
         public DbSet<Prenda> Prenda { get; set; }
         public DbSet<VariantePrenda> VariantePrenda { get; set; }
         public DbSet<MovimientoAuditoria> MovimientoAuditoria { get; set; }
+        #endregion
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // ==========================================
-            // Mapeo de Catálogos (Categoría, Talla, Color)
-            // ==========================================
+            #region Mapeo: Atributos y Catálogos
             modelBuilder.Entity<Categoria>(entity =>
             {
                 entity.ToTable("Categoria");
@@ -47,10 +47,9 @@ namespace LilasBoutique.Data
                 entity.Property(e => e.NombreColor).HasMaxLength(50).IsRequired();
                 entity.HasIndex(e => e.NombreColor).IsUnique();
             });
+            #endregion
 
-            // ==========================================
-            // Mapeo de Seguridad (Rol y Usuario)
-            // ==========================================
+            #region Mapeo: Seguridad (RBAC)
             modelBuilder.Entity<Rol>(entity =>
             {
                 entity.ToTable("Rol");
@@ -72,10 +71,9 @@ namespace LilasBoutique.Data
                       .HasForeignKey(d => d.RolId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
+            #endregion
 
-            // ==========================================
-            // Mapeo de Inventario (Prenda y Variante)
-            // ==========================================
+            #region Mapeo: Inventario y Transacciones
             modelBuilder.Entity<Prenda>(entity =>
             {
                 entity.ToTable("Prenda");
@@ -92,7 +90,6 @@ namespace LilasBoutique.Data
 
             modelBuilder.Entity<VariantePrenda>(entity =>
             {
-                // CORRECCIÓN: Check constraint dentro de ToTable respetando la regla (StockFisicoActual >= 0)[cite: 2, 3]
                 entity.ToTable("VariantePrenda", t => t.HasCheckConstraint("CHK_Stock_Fisico", "StockFisicoActual >= 0"));
 
                 entity.HasKey(e => e.IdVariante);
@@ -115,13 +112,11 @@ namespace LilasBoutique.Data
                       .HasForeignKey(d => d.ColorId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
+            #endregion
 
-            // ==========================================
-            // Mapeo de Auditoría
-            // ==========================================
+            #region Mapeo: Auditoría
             modelBuilder.Entity<MovimientoAuditoria>(entity =>
             {
-                // CORRECCIÓN: Check constraint dentro de ToTable validando los tipos de operación[cite: 2, 3]
                 entity.ToTable("MovimientoAuditoria", t => t.HasCheckConstraint("CHK_Tipo_Operacion", "TipoOperacion IN ('RECEPCION_PROVEEDOR', 'VENTA_CLIENTE', 'MERMA_DAÑO')"));
 
                 entity.HasKey(e => e.IdMovimiento);
@@ -139,6 +134,7 @@ namespace LilasBoutique.Data
                       .HasForeignKey(d => d.VarianteId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
+            #endregion
         }
     }
 }

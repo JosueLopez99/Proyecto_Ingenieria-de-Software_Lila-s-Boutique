@@ -86,18 +86,15 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label small">Precio (C$) <span class="text-danger">*</span></label>
-                        <InputNumber @bind-Value="precioTemporal" class="form-control" min="0" step="0.01"
-                                     onkeydown="if(['+','-','e','E'].includes(event.key)) event.preventDefault();" />
+                        <InputNumber @bind-Value="precioTemporal" class="form-control solo-enteros" min="0" step="any" />
                     </div>
                     <div class="col-md-6 mt-2">
                         <label class="form-label small fw-semibold text-success">Stock Inicial (Unidades)</label>
-                        <InputNumber @bind-Value="varianteActual.StockFisicoActual" class="form-control border-success" min="0"
-                                     onkeydown="if(['.','+','-','e','E',','].includes(event.key)) event.preventDefault();" />
+                        <InputNumber @bind-Value="varianteActual.StockFisicoActual" class="form-control border-success solo-enteros" min="0" />
                     </div>
                     <div class="col-md-6 mt-2">
                         <label class="form-label small fw-semibold text-warning">Alerta Desabastecimiento</label>
-                        <InputNumber @bind-Value="varianteActual.LimiteAlerta" class="form-control border-warning" min="0"
-                                     onkeydown="if(['.','+','-','e','E',','].includes(event.key)) event.preventDefault();" />
+                        <InputNumber @bind-Value="varianteActual.LimiteAlerta" class="form-control border-warning solo-enteros" min="0" />
                     </div>
                     <div class="col-12 mt-3">
                         <button class="btn btn-outline-primary w-100" @onclick="AgregarVariante">
@@ -161,19 +158,30 @@
 </div>
 
 @code {
+    #region Variables de Interfaz y Estado
+
     private string mensajeNotificacion = "";
     private bool esError = false;
 
+    // Entidades de Formulario
     private Prenda nuevaPrenda = new();
     private VariantePrenda varianteActual = new() { LimiteAlerta = 5, StockFisicoActual = 0 };
     private decimal precioTemporal = 0;
     private List<VariantePrenda> variantesAgregadas = new();
 
+    // Catálogos para Combobox
     private List<Categoria> categorias = new();
     private List<Talla> todasLasTallas = new();
     private List<Talla> tallasDisponibles = new();
     private List<Color> colores = new();
 
+    #endregion
+
+    #region Inicialización
+
+    /// <summary>
+    /// Verifica la seguridad RBAC y carga los catálogos estáticos necesarios para crear prendas.
+    /// </summary>
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -181,21 +189,10 @@
 
         if (!user.IsInRole("Administrador"))
         {
-            if (user.IsInRole("Vendedor"))
-            {
-                Navigation.NavigateTo("/catalogos");
-                return;
-            }
-            else if (user.IsInRole("Bodeguero"))
-            {
-                Navigation.NavigateTo("/bodega");
-                return;
-            }
-            else
-            {
-                Navigation.NavigateTo("/");
-                return;
-            }
+            if (user.IsInRole("Vendedor")) Navigation.NavigateTo("/catalogos");
+            else if (user.IsInRole("Bodeguero")) Navigation.NavigateTo("/bodega");
+            else Navigation.NavigateTo("/");
+            return;
         }
 
         try
@@ -210,6 +207,14 @@
         }
     }
 
+    #endregion
+
+    #region Lógica de Negocio
+
+    /// <summary>
+    /// Evento disparado cuando se selecciona una categoría.
+    /// Filtra las tallas disponibles para que coincidan únicamente con la categoría seleccionada.
+    /// </summary>
     private void OnCategoriaChanged(ChangeEventArgs e)
     {
         if (int.TryParse(e.Value?.ToString(), out int catId))
@@ -225,6 +230,9 @@
         }
     }
 
+    /// <summary>
+    /// Valida y añade una variante a la memoria local de la tabla antes de guardar la prenda.
+    /// </summary>
     private async Task AgregarVariante()
     {
         if (varianteActual.TallaId == 0 || varianteActual.ColorId == 0)
@@ -242,7 +250,6 @@
             await MostrarMensaje("El stock inicial y el límite de alerta no pueden ser negativos.", true);
             return;
         }
-
         if (variantesAgregadas.Any(v => v.TallaId == varianteActual.TallaId && v.ColorId == varianteActual.ColorId))
         {
             await MostrarMensaje("Esta combinación de Talla y Color ya fue agregada a la lista.", true);
@@ -252,22 +259,28 @@
         varianteActual.Precio = precioTemporal;
         variantesAgregadas.Add(varianteActual);
 
+        // Reinicio parcial del formulario para agilizar la entrada de datos
         varianteActual = new VariantePrenda
         {
             LimiteAlerta = varianteActual.LimiteAlerta,
             StockFisicoActual = 0
         };
         precioTemporal = 0;
-
-        // Limpiamos el mensaje de error si existía
         mensajeNotificacion = string.Empty;
     }
 
+    /// <summary>
+    /// Elimina una variante de la tabla temporal.
+    /// </summary>
     private void RemoverVariante(VariantePrenda variante)
     {
         variantesAgregadas.Remove(variante);
     }
 
+    /// <summary>
+    /// Ejecuta la validación final y envía la Prenda y todas sus variantes anidadas
+    /// a la capa de persistencia para ser guardadas mediante una transacción SQL.
+    /// </summary>
     private async Task GuardarPrenda()
     {
         if (string.IsNullOrWhiteSpace(nuevaPrenda.CodigoIdentificador) || string.IsNullOrWhiteSpace(nuevaPrenda.Marca) || nuevaPrenda.CategoriaId == 0)
@@ -286,6 +299,7 @@
         {
             await InventarioService.GuardarPrendaCompleta(nuevaPrenda, variantesAgregadas);
 
+            // Reseteo Total del Formulario tras el éxito
             nuevaPrenda = new Prenda();
             variantesAgregadas.Clear();
             tallasDisponibles.Clear();
@@ -298,27 +312,31 @@
         }
     }
 
+    #endregion
+
+    #region Control de Notificaciones
+
+    /// <summary>
+    /// Dispara un Toast informativo (Error o Éxito) gestionado en un hilo de fondo.
+    /// </summary>
     private Task MostrarMensaje(string msj, bool error)
     {
         mensajeNotificacion = msj;
         esError = error;
         StateHasChanged();
 
-        if (!error)
+        _ = Task.Run(async () =>
         {
-            // Ejecuta el temporizador en segundo plano sin bloquear el flujo principal
-            _ = Task.Run(async () =>
+            await Task.Delay(4000);
+            await InvokeAsync(() =>
             {
-                await Task.Delay(4000);
-                await InvokeAsync(() =>
-                {
-                    mensajeNotificacion = string.Empty;
-                    StateHasChanged();
-                });
+                mensajeNotificacion = string.Empty;
+                StateHasChanged();
             });
-        }
+        });
 
-        // Retorna de inmediato para que el modal se cierre y la tabla se actualice al instante
         return Task.CompletedTask;
     }
+
+    #endregion
 }

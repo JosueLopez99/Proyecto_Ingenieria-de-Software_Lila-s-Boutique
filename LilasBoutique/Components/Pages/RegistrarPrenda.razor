@@ -298,17 +298,27 @@
         }
     }
 
-    private async Task MostrarMensaje(string mensaje, bool error)
+    private Task MostrarMensaje(string msj, bool error)
     {
-        mensajeNotificacion = mensaje;
+        mensajeNotificacion = msj;
         esError = error;
         StateHasChanged();
 
         if (!error)
         {
-            await Task.Delay(4000);
-            mensajeNotificacion = string.Empty;
-            StateHasChanged();
+            // Ejecuta el temporizador en segundo plano sin bloquear el flujo principal
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(4000);
+                await InvokeAsync(() =>
+                {
+                    mensajeNotificacion = string.Empty;
+                    StateHasChanged();
+                });
+            });
         }
+
+        // Retorna de inmediato para que el modal se cierre y la tabla se actualice al instante
+        return Task.CompletedTask;
     }
 }

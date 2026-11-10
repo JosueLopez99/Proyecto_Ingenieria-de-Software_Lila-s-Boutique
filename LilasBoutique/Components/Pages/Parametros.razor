@@ -64,7 +64,7 @@
         </div>
     </div>
 
-    <!-- ================= PANEL DE TALLAS ORGANIZADAS ================= -->
+    <!-- ================= PANEL DE TALLAS ORGANIZADAS (ACORDEÓN) ================= -->
     <div class="col-md-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-success text-white fw-bold">
@@ -101,37 +101,48 @@
                     @foreach (var cat in categorias)
                     {
                         var tallasDeEstaCategoria = tallas.Where(t => t.CategoriaId == cat.IdCategoria).ToList();
+                        bool estaExpandido = categoriasExpandidas.Contains(cat.IdCategoria);
 
-                        <div class="mb-3 border rounded shadow-sm bg-light">
-                            <div class="bg-white border-bottom px-3 py-2 rounded-top d-flex justify-content-between align-items-center">
+                        <div class="mb-2 border rounded shadow-sm bg-light">
+                            <!-- Cabecera Clickable -->
+                            <div class="bg-white px-3 py-2 rounded-top d-flex justify-content-between align-items-center @(estaExpandido ? "border-bottom" : "")"
+                                 style="cursor: pointer;" @onclick="() => ToggleCategoria(cat.IdCategoria)">
                                 <span class="fw-bold text-success"><i class="bi bi-tag-fill me-2"></i>@cat.NombreCategoria</span>
-                                <span class="badge bg-secondary rounded-pill">@tallasDeEstaCategoria.Count</span>
+                                <div>
+                                    <span class="badge bg-secondary rounded-pill me-2">@tallasDeEstaCategoria.Count</span>
+                                    <i class="bi @(estaExpandido ? "bi-chevron-up" : "bi-chevron-down") text-muted"></i>
+                                </div>
                             </div>
-                            <div class="p-2">
-                                @if (!tallasDeEstaCategoria.Any())
-                                {
-                                    <div class="text-muted small fst-italic text-center py-2">Sin tallas registradas</div>
-                                }
-                                else
-                                {
-                                    <ul class="list-group list-group-flush small">
-                                        @foreach (var talla in tallasDeEstaCategoria)
-                                        {
-                                            <li class="list-group-item px-2 py-1 bg-transparent d-flex justify-content-between align-items-center">
-                                                <span class="fw-semibold text-dark">@talla.NombreTalla</span>
-                                                <div class="btn-group">
-                                                    <button type="button" class="btn btn-sm text-primary p-0 me-2" title="Editar" @onclick="() => EditarTalla(talla)">
-                                                        <i class="bi bi-pencil-fill"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm text-danger p-0" title="Eliminar" @onclick="() => IniciarEliminacionTalla(talla.IdTalla)">
-                                                        <i class="bi bi-trash-fill"></i>
-                                                    </button>
-                                                </div>
-                                            </li>
-                                        }
-                                    </ul>
-                                }
-                            </div>
+
+                            <!-- Contenido Desplegable -->
+                            @if (estaExpandido)
+                            {
+                                <div class="p-2">
+                                    @if (!tallasDeEstaCategoria.Any())
+                                    {
+                                        <div class="text-muted small fst-italic text-center py-2">Sin tallas registradas</div>
+                                    }
+                                    else
+                                    {
+                                        <ul class="list-group list-group-flush small">
+                                            @foreach (var talla in tallasDeEstaCategoria)
+                                            {
+                                                <li class="list-group-item px-2 py-1 bg-transparent d-flex justify-content-between align-items-center border-bottom-0">
+                                                    <span class="fw-semibold text-dark">@talla.NombreTalla</span>
+                                                    <div class="btn-group">
+                                                        <button type="button" class="btn btn-sm text-primary p-0 me-2" title="Editar" @onclick="() => EditarTalla(talla)">
+                                                            <i class="bi bi-pencil-fill"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm text-danger p-0" title="Eliminar" @onclick="() => IniciarEliminacionTalla(talla.IdTalla)">
+                                                            <i class="bi bi-trash-fill"></i>
+                                                        </button>
+                                                    </div>
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                </div>
+                            }
                         </div>
                     }
                 </div>
@@ -261,6 +272,9 @@
     private List<Talla> tallas = new();
     private List<Color> colores = new();
 
+    // Variable para rastrear cuáles categorías están expandidas
+    private HashSet<int> categoriasExpandidas = new();
+
     // Variables para Modales
     private bool mostrarModalEliminarCategoria = false;
     private bool mostrarModalEliminarTalla = false;
@@ -271,7 +285,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Validación de seguridad por rol: Solo Administrador
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
@@ -311,6 +324,19 @@
         colores = await InventarioService.ObtenerColores();
     }
 
+    // --- MÉTODOS DE INTERACCIÓN DE UI ---
+    private void ToggleCategoria(int idCategoria)
+    {
+        if (categoriasExpandidas.Contains(idCategoria))
+        {
+            categoriasExpandidas.Remove(idCategoria);
+        }
+        else
+        {
+            categoriasExpandidas.Add(idCategoria);
+        }
+    }
+
     // --- MÉTODOS DE CARGA PARA EDICIÓN ---
     private void EditarCategoria(Categoria cat)
     {
@@ -320,6 +346,12 @@
     private void EditarTalla(Talla talla)
     {
         nuevaTalla = new Talla { IdTalla = talla.IdTalla, NombreTalla = talla.NombreTalla, CategoriaId = talla.CategoriaId };
+
+        // Al editar una talla, expandimos automáticamente la categoría a la que pertenece
+        if (!categoriasExpandidas.Contains(talla.CategoriaId))
+        {
+            categoriasExpandidas.Add(talla.CategoriaId);
+        }
     }
 
     private void EditarColor(Color color)
@@ -377,6 +409,12 @@
             {
                 await InventarioService.ActualizarTalla(nuevaTalla);
                 await MostrarMensaje("¡Talla actualizada exitosamente!", false);
+            }
+
+            // Mantenemos abierta la categoría donde se acaba de agregar o modificar la talla
+            if (!categoriasExpandidas.Contains(nuevaTalla.CategoriaId))
+            {
+                categoriasExpandidas.Add(nuevaTalla.CategoriaId);
             }
 
             nuevaTalla = new Talla();
@@ -496,17 +534,25 @@
         idEliminarColor = 0;
     }
 
-    private async Task MostrarMensaje(string mensaje, bool error)
+    private Task MostrarMensaje(string msj, bool error)
     {
-        mensajeNotificacion = mensaje;
+        mensajeNotificacion = msj;
         esError = error;
         StateHasChanged();
 
         if (!error)
         {
-            await Task.Delay(4000);
-            mensajeNotificacion = string.Empty;
-            StateHasChanged();
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(4000);
+                await InvokeAsync(() =>
+                {
+                    mensajeNotificacion = string.Empty;
+                    StateHasChanged();
+                });
+            });
         }
+
+        return Task.CompletedTask;
     }
 }

@@ -22,16 +22,40 @@
 }
 
 <div class="card border-0 shadow-sm p-4">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <div class="input-group">
-                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control" placeholder="Buscar por código, marca, categoría o talla..."
-                       @bind="TextoBusqueda" @bind:event="oninput" />
-                <button class="btn btn-primary px-4" @onclick="FiltrarCatalogo">Filtrar</button>
+
+    <!-- ================= PANEL DE FILTROS INDEPENDIENTES ================= -->
+    <div class="row g-2 mb-4 bg-light p-3 rounded border align-items-end">
+        <div class="col-md-2">
+            <label class="form-label small fw-bold text-secondary mb-1">Código</label>
+            <input type="text" class="form-control form-control-sm shadow-sm" placeholder="Buscar..." @bind="filtroCodigo" @bind:event="oninput" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-bold text-secondary mb-1">Marca</label>
+            <input type="text" class="form-control form-control-sm shadow-sm" placeholder="Buscar..." @bind="filtroMarca" @bind:event="oninput" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-bold text-secondary mb-1">Categoría</label>
+            <input type="text" class="form-control form-control-sm shadow-sm" placeholder="Buscar..." @bind="filtroCategoria" @bind:event="oninput" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-bold text-secondary mb-1">Talla</label>
+            <input type="text" class="form-control form-control-sm shadow-sm" placeholder="Ej: S, 28..." @bind="filtroTalla" @bind:event="oninput" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-bold text-secondary mb-1">Color</label>
+            <input type="text" class="form-control form-control-sm shadow-sm" placeholder="Buscar..." @bind="filtroColor" @bind:event="oninput" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-bold text-secondary mb-1">Precio Máx (C$)</label>
+            <div class="input-group input-group-sm shadow-sm">
+                <input type="number" class="form-control" placeholder="0.00" min="0" @bind="filtroPrecioMax" @bind:event="oninput" />
+                <button class="btn btn-danger" type="button" title="Limpiar Todos los Filtros" @onclick="LimpiarFiltros">
+                    <i class="bi bi-x-circle-fill"></i>
+                </button>
             </div>
         </div>
     </div>
+
 
     <div class="table-responsive">
         <ErrorBoundary>
@@ -66,7 +90,7 @@
                         }
                         else if (!catalogoFiltrado.Any())
                         {
-                            <tr><td colspan="8" class="text-muted py-4">No se encontraron prendas en el catálogo.</td></tr>
+                            <tr><td colspan="8" class="text-muted py-4">No se encontraron prendas con estos filtros.</td></tr>
                         }
                         else
                         {
@@ -91,7 +115,6 @@
                                         <Authorized>
                                             <td class="text-end">
                                                 <div class="btn-group">
-
                                                     @if (esAdministrador)
                                                     {
                                                         <button class="btn btn-sm btn-outline-secondary" title="Editar Prenda y Precio" @onclick="() => AbrirModalEdicion(item)">
@@ -101,14 +124,12 @@
                                                             <i class="bi bi-trash"></i>
                                                         </button>
                                                     }
-
                                                     @if (puedeVender)
                                                     {
                                                         <button class="btn btn-sm btn-primary fw-bold ms-1" @onclick="() => AbrirModalVenta(item)">
                                                             <i class="bi bi-cart-plus me-1"></i> Vender
                                                         </button>
                                                     }
-
                                                 </div>
                                             </td>
                                         </Authorized>
@@ -147,13 +168,11 @@
                     </div>
                     <p class="mb-4 text-center"><strong>Talla:</strong> @varianteSeleccionada?.Talla?.NombreTalla | <strong>Color:</strong> @varianteSeleccionada?.Color?.NombreColor</p>
 
-                    <!-- ALERTA DE STOCK CON COLORES FORZADOS PARA MODO OSCURO -->
                     <div class="alert py-2 text-center" style="background-color: #cff4fc !important; border: 1px solid #b6effb !important; color: #055160 !important;">
                         <i class="bi bi-box-seam me-2"></i>Stock Disponible: <strong style="color: #055160 !important; font-weight: 800;">@varianteSeleccionada?.StockFisicoActual unidades</strong>
                     </div>
 
                     <label class="form-label fw-bold">Cantidad a Vender:</label>
-                    <!-- RESTRICCIÓN NUMÉRICA CON window.event PARA EVITAR ADVERTENCIAS -->
                     <input type="number" @bind="cantidadVenta" class="form-control form-control-lg text-center" min="1" max="@varianteSeleccionada?.StockFisicoActual"
                            onkeydown="if(['.','+','-','e','E',','].includes(window.event.key)) window.event.preventDefault();" />
                 </div>
@@ -187,7 +206,6 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Nuevo Precio de Venta (C$):</label>
-                        <!-- RESTRICCIÓN NUMÉRICA CON window.event PARA EVITAR ADVERTENCIAS -->
                         <input type="number" @bind="varianteSeleccionada!.Precio" class="form-control form-control-lg text-success fw-bold" min="0" step="any"
                                onkeydown="if(['+','-','e','E'].includes(window.event.key)) window.event.preventDefault();" />
                     </div>
@@ -235,12 +253,25 @@
     private List<VariantePrenda> catalogoCompleto = new();
     private List<VariantePrenda> catalogoFiltrado = new();
 
-    private string _textoBusqueda = "";
-    private string TextoBusqueda
-    {
-        get => _textoBusqueda;
-        set { _textoBusqueda = value; FiltrarCatalogo(); }
-    }
+    // ================= VARIABLES PARA LOS FILTROS INDEPENDIENTES =================
+    private string _filtroCodigo = "";
+    private string filtroCodigo { get => _filtroCodigo; set { _filtroCodigo = value; FiltrarCatalogo(); } }
+
+    private string _filtroMarca = "";
+    private string filtroMarca { get => _filtroMarca; set { _filtroMarca = value; FiltrarCatalogo(); } }
+
+    private string _filtroCategoria = "";
+    private string filtroCategoria { get => _filtroCategoria; set { _filtroCategoria = value; FiltrarCatalogo(); } }
+
+    private string _filtroTalla = "";
+    private string filtroTalla { get => _filtroTalla; set { _filtroTalla = value; FiltrarCatalogo(); } }
+
+    private string _filtroColor = "";
+    private string filtroColor { get => _filtroColor; set { _filtroColor = value; FiltrarCatalogo(); } }
+
+    private decimal? _filtroPrecioMax = null;
+    private decimal? filtroPrecioMax { get => _filtroPrecioMax; set { _filtroPrecioMax = value; FiltrarCatalogo(); } }
+    // ============================================================================
 
     private bool mostrarModalVenta = false;
     private bool mostrarModalEdicion = false;
@@ -288,21 +319,38 @@
     {
         if (catalogoCompleto == null) return;
 
-        if (string.IsNullOrWhiteSpace(TextoBusqueda))
-        {
-            catalogoFiltrado = catalogoCompleto.Where(v => v != null).ToList();
-        }
-        else
-        {
-            var b = TextoBusqueda.ToLower();
-            catalogoFiltrado = catalogoCompleto.Where(v => v != null && (
-                (v.Prenda?.CodigoIdentificador?.ToLower().Contains(b) ?? false) ||
-                (v.Prenda?.Marca?.ToLower().Contains(b) ?? false) ||
-                (v.Prenda?.Categoria?.NombreCategoria?.ToLower().Contains(b) ?? false) ||
-                (v.Talla?.NombreTalla?.ToLower().Contains(b) ?? false) ||
-                (v.Color?.NombreColor?.ToLower().Contains(b) ?? false)
-            )).ToList();
-        }
+        var consulta = catalogoCompleto.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(filtroCodigo))
+            consulta = consulta.Where(v => v.Prenda?.CodigoIdentificador?.ToLower().Contains(filtroCodigo.ToLower()) ?? false);
+
+        if (!string.IsNullOrWhiteSpace(filtroMarca))
+            consulta = consulta.Where(v => v.Prenda?.Marca?.ToLower().Contains(filtroMarca.ToLower()) ?? false);
+
+        if (!string.IsNullOrWhiteSpace(filtroCategoria))
+            consulta = consulta.Where(v => v.Prenda?.Categoria?.NombreCategoria?.ToLower().Contains(filtroCategoria.ToLower()) ?? false);
+
+        if (!string.IsNullOrWhiteSpace(filtroTalla))
+            consulta = consulta.Where(v => v.Talla?.NombreTalla?.ToLower().Contains(filtroTalla.ToLower()) ?? false);
+
+        if (!string.IsNullOrWhiteSpace(filtroColor))
+            consulta = consulta.Where(v => v.Color?.NombreColor?.ToLower().Contains(filtroColor.ToLower()) ?? false);
+
+        if (filtroPrecioMax.HasValue)
+            consulta = consulta.Where(v => v.Precio <= filtroPrecioMax.Value);
+
+        catalogoFiltrado = consulta.ToList();
+    }
+
+    private void LimpiarFiltros()
+    {
+        _filtroCodigo = "";
+        _filtroMarca = "";
+        _filtroCategoria = "";
+        _filtroTalla = "";
+        _filtroColor = "";
+        _filtroPrecioMax = null;
+        FiltrarCatalogo();
     }
 
     private async Task AbrirModalVenta(VariantePrenda variante)
@@ -322,13 +370,13 @@
         if (cantidadVenta <= 0)
         {
             await MostrarMensaje("Debe ingresar una cantidad válida mayor a 0.", true);
-            CerrarModales(); return;
+            return;
         }
 
         if (cantidadVenta > varianteSeleccionada.StockFisicoActual)
         {
             await MostrarMensaje($"Error: Solo hay {varianteSeleccionada.StockFisicoActual} unidades en stock.", true);
-            CerrarModales(); return;
+            return;
         }
 
         try
@@ -344,7 +392,6 @@
         catch (Exception ex)
         {
             await MostrarMensaje($"Error al procesar la venta: {ex.Message}", true);
-            CerrarModales();
         }
     }
 
@@ -368,6 +415,24 @@
 
     private async Task ConfirmarEdicion()
     {
+        if (string.IsNullOrWhiteSpace(varianteSeleccionada?.Prenda?.CodigoIdentificador))
+        {
+            await MostrarMensaje("El código identificador no puede estar vacío.", true);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(varianteSeleccionada?.Prenda?.Marca))
+        {
+            await MostrarMensaje("La marca de la prenda no puede estar vacía.", true);
+            return;
+        }
+
+        if (varianteSeleccionada?.Precio < 0)
+        {
+            await MostrarMensaje("El precio no puede ser un valor negativo.", true);
+            return;
+        }
+
         try
         {
             await InventarioService.ActualizarVariante(varianteSeleccionada);
@@ -414,17 +479,22 @@
         mostrarModalEliminacion = false;
     }
 
-    private async Task MostrarMensaje(string msj, bool error)
+    private Task MostrarMensaje(string msj, bool error)
     {
         mensajeNotificacion = msj;
         esError = error;
         StateHasChanged();
 
-        if (!error)
+        _ = Task.Run(async () =>
         {
             await Task.Delay(4000);
-            mensajeNotificacion = string.Empty;
-            StateHasChanged();
-        }
+            await InvokeAsync(() =>
+            {
+                mensajeNotificacion = string.Empty;
+                StateHasChanged();
+            });
+        });
+
+        return Task.CompletedTask;
     }
 }

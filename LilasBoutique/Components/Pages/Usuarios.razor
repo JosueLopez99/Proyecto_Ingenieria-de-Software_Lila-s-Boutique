@@ -16,10 +16,13 @@
 
 @if (!string.IsNullOrEmpty(mensajeSistema))
 {
-    <div class="alert @(esError ? "alert-danger" : "alert-success") border-0 shadow-sm mb-4 d-flex align-items-center">
-        <i class="bi @(esError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill") me-3 fs-5"></i>
-        <div>@mensajeSistema</div>
-        <button type="button" class="btn-close ms-auto" @onclick="() => mensajeSistema = string.Empty"></button>
+    <div class="alert alerta-flotante @(esError ? "error" : "exito") d-flex align-items-center shadow-lg" role="alert">
+        <i class="bi @(esError ? "bi-x-octagon-fill text-danger" : "bi-check-circle-fill text-success") fs-3 me-3"></i>
+        <div class="flex-grow-1">
+            <h6 class="alert-heading fw-bold mb-1">@(esError ? "Atención" : "Operación Exitosa")</h6>
+            <p class="mb-0 small">@mensajeSistema</p>
+        </div>
+        <button type="button" class="btn-close ms-2" @onclick="() => mensajeSistema = string.Empty"></button>
     </div>
 }
 
@@ -281,28 +284,28 @@
     {
         if (string.IsNullOrWhiteSpace(nuevoCorreo) || string.IsNullOrWhiteSpace(nuevaContrasena) || nuevoRolId == 0)
         {
-            MostrarMensaje("Debe completar el correo, la contraseña y seleccionar un rol válido.", true);
+            await MostrarMensaje("Debe completar el correo, la contraseña y seleccionar un rol válido.", true);
             return;
         }
         try
         {
             await UsuarioService.CrearUsuario(nuevoCorreo, nuevaContrasena, nuevoRolId);
-            MostrarMensaje($"¡El usuario {nuevoCorreo} fue creado exitosamente!", false);
+            await MostrarMensaje($"¡El usuario {nuevoCorreo} fue creado exitosamente!", false);
             CerrarModales();
             await CargarDatos();
         }
         catch (Exception ex)
         {
-            MostrarMensaje($"Error: {ex.Message}", true);
+            await MostrarMensaje($"Error: {ex.Message}", true);
         }
     }
 
     // --- LÓGICA MODAL EDITAR ---
-    private void AbrirModalEditar(Usuario u)
+    private async Task AbrirModalEditar(Usuario u)
     {
         if (u.Correo == "admin@lilasboutique.com" && correoUsuarioActual != "admin@lilasboutique.com")
         {
-            MostrarMensaje("No tienes permisos suficientes para editar la cuenta del Administrador Principal.", true);
+            await MostrarMensaje("No tienes permisos suficientes para editar la cuenta del Administrador Principal.", true);
             return;
         }
 
@@ -334,20 +337,20 @@
     {
         if (string.IsNullOrWhiteSpace(editCorreo))
         {
-            MostrarMensaje("El correo no puede quedar vacío.", true);
+            await MostrarMensaje("El correo no puede quedar vacío.", true);
             return;
         }
 
         try
         {
             await UsuarioService.ActualizarUsuarioCompleto(editIdUsuario, editCorreo, editNuevaContrasena, editRolId, editEstadoActivo);
-            MostrarMensaje("Usuario actualizado exitosamente.", false);
+            await MostrarMensaje("Usuario actualizado exitosamente.", false);
             CerrarModales();
             await CargarDatos();
         }
         catch (Exception ex)
         {
-            MostrarMensaje($"Error al actualizar: {ex.Message}", true);
+            await MostrarMensaje($"Error al actualizar: {ex.Message}", true);
         }
     }
 
@@ -365,13 +368,13 @@
         try
         {
             await UsuarioService.EliminarUsuario(usuarioAEliminar.IdUsuario);
-            MostrarMensaje($"El usuario {usuarioAEliminar.Correo} ha sido eliminado permanentemente.", false);
+            await MostrarMensaje($"El usuario {usuarioAEliminar.Correo} ha sido eliminado permanentemente.", false);
             CerrarModales();
             await CargarDatos();
         }
         catch (Exception ex)
         {
-            MostrarMensaje($"Error al eliminar (Es probable que el usuario tenga registros vinculados): {ex.Message}", true);
+            await MostrarMensaje($"Error al eliminar (Es probable que el usuario tenga registros vinculados): {ex.Message}", true);
             CerrarModales();
         }
     }
@@ -383,9 +386,17 @@
         mostrarModalEliminar = false;
     }
 
-    private void MostrarMensaje(string mensaje, bool error)
+    private async Task MostrarMensaje(string mensaje, bool error)
     {
         mensajeSistema = mensaje;
         esError = error;
+        StateHasChanged();
+
+        if (!error)
+        {
+            await Task.Delay(4000);
+            mensajeSistema = string.Empty;
+            StateHasChanged();
+        }
     }
 }

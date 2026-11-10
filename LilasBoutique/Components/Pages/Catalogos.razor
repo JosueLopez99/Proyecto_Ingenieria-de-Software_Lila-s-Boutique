@@ -1,5 +1,4 @@
 ﻿@page "/catalogos"
-@attribute [Authorize(Roles = "Administrador, Vendedor, Bodeguero")]
 @rendermode InteractiveServer
 @using LilasBoutique.Models
 @using LilasBoutique.Data
@@ -12,10 +11,13 @@
 
 @if (!string.IsNullOrEmpty(mensajeNotificacion))
 {
-    <div class="alert @(esError ? "alert-danger" : "alert-success") alert-dismissible fade show shadow-sm" role="alert">
-        <i class="bi @(esError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill") me-2"></i>
-        <strong>@(esError ? "Error: " : "¡Éxito! ")</strong> @mensajeNotificacion
-        <button type="button" class="btn-close" @onclick="() => mensajeNotificacion = string.Empty"></button>
+    <div class="alert alerta-flotante @(esError ? "error" : "exito") d-flex align-items-center" role="alert">
+        <i class="bi @(esError ? "bi-x-octagon-fill text-danger" : "bi-check-circle-fill text-success") fs-3 me-3"></i>
+        <div class="flex-grow-1">
+            <h6 class="alert-heading fw-bold mb-1">@(esError ? "Atención" : "Operación Exitosa")</h6>
+            <p class="mb-0 small">@mensajeNotificacion</p>
+        </div>
+        <button type="button" class="btn-close ms-2" @onclick="() => mensajeNotificacion = string.Empty"></button>
     </div>
 }
 
@@ -37,7 +39,6 @@
                 <table class="table table-hover align-middle text-center">
                     <thead class="table-light">
                         <tr>
-                            <!-- NUEVA COLUMNA: CÓDIGO -->
                             <th class="text-start">Código</th>
                             <th class="text-start">Marca</th>
                             <th>Categoría</th>
@@ -45,7 +46,12 @@
                             <th>Color</th>
                             <th>Stock</th>
                             <th>Precio</th>
-                            <th class="text-end">Acciones</th>
+
+                            <AuthorizeView Roles="Administrador, Vendedor">
+                                <Authorized>
+                                    <th class="text-end">Acciones</th>
+                                </Authorized>
+                            </AuthorizeView>
                         </tr>
                     </thead>
                     <tbody>
@@ -67,7 +73,6 @@
                             @foreach (var item in catalogoFiltrado)
                             {
                                 <tr @key="item.IdVariante">
-                                    <!-- MOSTRAR EL CÓDIGO -->
                                     <td class="text-start fw-bold text-secondary">
                                         <i class="bi bi-upc-scan me-1"></i>@(item.Prenda?.CodigoIdentificador ?? "N/A")
                                     </td>
@@ -81,26 +86,33 @@
                                         </span>
                                     </td>
                                     <td class="fw-bold text-success">C$ @(item.Precio)</td>
-                                    <td class="text-end">
-                                        <div class="btn-group">
-                                            @if (esAdministrador)
-                                            {
-                                                <button class="btn btn-sm btn-outline-secondary" title="Editar Prenda y Precio" @onclick="() => AbrirModalEdicion(item)">
-                                                    <i class="bi bi-pencil"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger" title="Eliminar" @onclick="() => IniciarEliminacion(item.IdVariante)">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            }
 
-                                            @if (puedeVender)
-                                            {
-                                                <button class="btn btn-sm btn-primary fw-bold ms-1" @onclick="() => AbrirModalVenta(item)">
-                                                    <i class="bi bi-cart-plus me-1"></i> Vender
-                                                </button>
-                                            }
-                                        </div>
-                                    </td>
+                                    <AuthorizeView Roles="Administrador, Vendedor">
+                                        <Authorized>
+                                            <td class="text-end">
+                                                <div class="btn-group">
+
+                                                    @if (esAdministrador)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-secondary" title="Editar Prenda y Precio" @onclick="() => AbrirModalEdicion(item)">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" title="Eliminar" @onclick="() => IniciarEliminacion(item.IdVariante)">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    }
+
+                                                    @if (puedeVender)
+                                                    {
+                                                        <button class="btn btn-sm btn-primary fw-bold ms-1" @onclick="() => AbrirModalVenta(item)">
+                                                            <i class="bi bi-cart-plus me-1"></i> Vender
+                                                        </button>
+                                                    }
+
+                                                </div>
+                                            </td>
+                                        </Authorized>
+                                    </AuthorizeView>
                                 </tr>
                             }
                         }
@@ -135,13 +147,15 @@
                     </div>
                     <p class="mb-4 text-center"><strong>Talla:</strong> @varianteSeleccionada?.Talla?.NombreTalla | <strong>Color:</strong> @varianteSeleccionada?.Color?.NombreColor</p>
 
-                    <div class="alert alert-info py-2 text-center">
-                        <i class="bi bi-box-seam me-2"></i>Stock Disponible: <strong>@varianteSeleccionada?.StockFisicoActual unidades</strong>
+                    <!-- ALERTA DE STOCK CON COLORES FORZADOS PARA MODO OSCURO -->
+                    <div class="alert py-2 text-center" style="background-color: #cff4fc !important; border: 1px solid #b6effb !important; color: #055160 !important;">
+                        <i class="bi bi-box-seam me-2"></i>Stock Disponible: <strong style="color: #055160 !important; font-weight: 800;">@varianteSeleccionada?.StockFisicoActual unidades</strong>
                     </div>
 
                     <label class="form-label fw-bold">Cantidad a Vender:</label>
+                    <!-- RESTRICCIÓN NUMÉRICA CON window.event PARA EVITAR ADVERTENCIAS -->
                     <input type="number" @bind="cantidadVenta" class="form-control form-control-lg text-center" min="1" max="@varianteSeleccionada?.StockFisicoActual"
-                           onkeydown="if(['.','+','-','e','E',','].includes(event.key)) event.preventDefault();" />
+                           onkeydown="if(['.','+','-','e','E',','].includes(window.event.key)) window.event.preventDefault();" />
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" @onclick="CerrarModales">Cancelar</button>
@@ -173,8 +187,9 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Nuevo Precio de Venta (C$):</label>
+                        <!-- RESTRICCIÓN NUMÉRICA CON window.event PARA EVITAR ADVERTENCIAS -->
                         <input type="number" @bind="varianteSeleccionada!.Precio" class="form-control form-control-lg text-success fw-bold" min="0" step="any"
-                               onkeydown="if(['+','-','e','E'].includes(event.key)) event.preventDefault();" />
+                               onkeydown="if(['+','-','e','E'].includes(window.event.key)) window.event.preventDefault();" />
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
@@ -234,7 +249,6 @@
     private int idVarianteAEliminar = 0;
     private int cantidadVenta = 1;
 
-    // NUEVA VARIABLE: Usaremos el correo en lugar del ID
     private string correoUsuarioActual = "";
 
     protected override async Task OnInitializedAsync()
@@ -246,8 +260,6 @@
         {
             esAdministrador = user.IsInRole("Administrador");
             puedeVender = user.IsInRole("Administrador") || user.IsInRole("Vendedor");
-
-            // Capturamos el correo exacto de la sesión
             correoUsuarioActual = user.Identity.Name ?? "";
         }
     }
@@ -265,7 +277,7 @@
             }
             catch (Exception ex)
             {
-                MostrarMensaje($"Error crítico de base de datos: {ex.Message}", true);
+                await MostrarMensaje($"Error crítico de base de datos: {ex.Message}", true);
                 cargando = false;
                 StateHasChanged();
             }
@@ -293,39 +305,37 @@
         }
     }
 
-    private void AbrirModalVenta(VariantePrenda variante)
+    private async Task AbrirModalVenta(VariantePrenda variante)
     {
         if (variante.StockFisicoActual <= 0)
         {
-            MostrarMensaje("No hay stock disponible para vender esta prenda.", true);
+            await MostrarMensaje("No hay stock disponible para vender esta prenda.", true);
             return;
         }
         varianteSeleccionada = variante;
         cantidadVenta = 1;
         mostrarModalVenta = true;
-        MostrarMensaje("", false);
     }
 
     private async Task ConfirmarVenta()
     {
         if (cantidadVenta <= 0)
         {
-            MostrarMensaje("Debe ingresar una cantidad válida mayor a 0.", true);
+            await MostrarMensaje("Debe ingresar una cantidad válida mayor a 0.", true);
             CerrarModales(); return;
         }
 
         if (cantidadVenta > varianteSeleccionada.StockFisicoActual)
         {
-            MostrarMensaje($"Error: Solo hay {varianteSeleccionada.StockFisicoActual} unidades en stock.", true);
+            await MostrarMensaje($"Error: Solo hay {varianteSeleccionada.StockFisicoActual} unidades en stock.", true);
             CerrarModales(); return;
         }
 
         try
         {
-            // CORREGIDO: Pasamos la variable 'correoUsuarioActual' (string) en lugar del ID numérico
             await InventarioService.RegistrarVenta(varianteSeleccionada.IdVariante, cantidadVenta, correoUsuarioActual);
 
-            MostrarMensaje($"¡Venta registrada exitosamente! Se descontaron {cantidadVenta} unidades.", false);
+            await MostrarMensaje($"¡Venta registrada exitosamente! Se descontaron {cantidadVenta} unidades.", false);
             CerrarModales();
 
             catalogoCompleto = await InventarioService.ObtenerCatalogo();
@@ -333,7 +343,7 @@
         }
         catch (Exception ex)
         {
-            MostrarMensaje($"Error al procesar la venta: {ex.Message}", true);
+            await MostrarMensaje($"Error al procesar la venta: {ex.Message}", true);
             CerrarModales();
         }
     }
@@ -361,7 +371,7 @@
         try
         {
             await InventarioService.ActualizarVariante(varianteSeleccionada);
-            MostrarMensaje("¡Prenda y precio actualizados correctamente!", false);
+            await MostrarMensaje("¡Prenda y precio actualizados correctamente!", false);
             CerrarModales();
 
             catalogoCompleto = await InventarioService.ObtenerCatalogo();
@@ -369,7 +379,7 @@
         }
         catch (Exception ex)
         {
-            MostrarMensaje($"Error al actualizar: {ex.Message}", true);
+            await MostrarMensaje($"Error al actualizar: {ex.Message}", true);
         }
     }
 
@@ -385,7 +395,7 @@
         {
             await InventarioService.EliminarVariante(idVarianteAEliminar);
             CerrarModales();
-            MostrarMensaje("¡El registro fue eliminado exitosamente del catálogo!", false);
+            await MostrarMensaje("¡El registro fue eliminado exitosamente del catálogo!", false);
 
             catalogoCompleto = await InventarioService.ObtenerCatalogo();
             FiltrarCatalogo();
@@ -393,7 +403,7 @@
         catch (Exception)
         {
             CerrarModales();
-            MostrarMensaje("No se puede eliminar: Esta prenda ya tiene un historial de movimientos en bodega.", true);
+            await MostrarMensaje("No se puede eliminar: Esta prenda ya tiene un historial de movimientos en bodega.", true);
         }
     }
 
@@ -404,9 +414,17 @@
         mostrarModalEliminacion = false;
     }
 
-    private void MostrarMensaje(string msj, bool error)
+    private async Task MostrarMensaje(string msj, bool error)
     {
         mensajeNotificacion = msj;
         esError = error;
+        StateHasChanged();
+
+        if (!error)
+        {
+            await Task.Delay(4000);
+            mensajeNotificacion = string.Empty;
+            StateHasChanged();
+        }
     }
 }

@@ -10,10 +10,13 @@
 
 @if (!string.IsNullOrEmpty(mensajeNotificacion))
 {
-    <div class="alert @(esError ? "alert-danger" : "alert-success") alert-dismissible fade show shadow-sm" role="alert">
-        <i class="bi @(esError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill") me-2"></i>
-        @mensajeNotificacion
-        <button type="button" class="btn-close" @onclick="() => mensajeNotificacion = string.Empty"></button>
+    <div class="alert alerta-flotante @(esError ? "error" : "exito") d-flex align-items-center" role="alert">
+        <i class="bi @(esError ? "bi-x-octagon-fill text-danger" : "bi-check-circle-fill text-success") fs-3 me-3"></i>
+        <div class="flex-grow-1">
+            <h6 class="alert-heading fw-bold mb-1">@(esError ? "Atención" : "Operación Exitosa")</h6>
+            <p class="mb-0 small">@mensajeNotificacion</p>
+        </div>
+        <button type="button" class="btn-close ms-2" @onclick="() => mensajeNotificacion = string.Empty"></button>
     </div>
 }
 
@@ -173,7 +176,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Validación estricta por rol: Solo Administrador
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
@@ -204,7 +206,7 @@
         }
         catch (Exception ex)
         {
-            MostrarMensaje($"Error al cargar catálogos: {ex.Message}", true);
+            await MostrarMensaje($"Error al cargar catálogos: {ex.Message}", true);
         }
     }
 
@@ -223,27 +225,27 @@
         }
     }
 
-    private void AgregarVariante()
+    private async Task AgregarVariante()
     {
         if (varianteActual.TallaId == 0 || varianteActual.ColorId == 0)
         {
-            MostrarMensaje("Debe seleccionar una Talla y un Color para la variante.", true);
+            await MostrarMensaje("Debe seleccionar una Talla y un Color para la variante.", true);
             return;
         }
         if (precioTemporal <= 0)
         {
-            MostrarMensaje("El precio de venta debe ser mayor a cero.", true);
+            await MostrarMensaje("El precio de venta debe ser mayor a cero.", true);
             return;
         }
         if (varianteActual.StockFisicoActual < 0 || varianteActual.LimiteAlerta < 0)
         {
-            MostrarMensaje("El stock inicial y el límite de alerta no pueden ser negativos.", true);
+            await MostrarMensaje("El stock inicial y el límite de alerta no pueden ser negativos.", true);
             return;
         }
 
         if (variantesAgregadas.Any(v => v.TallaId == varianteActual.TallaId && v.ColorId == varianteActual.ColorId))
         {
-            MostrarMensaje("Esta combinación de Talla y Color ya fue agregada a la lista.", true);
+            await MostrarMensaje("Esta combinación de Talla y Color ya fue agregada a la lista.", true);
             return;
         }
 
@@ -256,7 +258,9 @@
             StockFisicoActual = 0
         };
         precioTemporal = 0;
-        MostrarMensaje("", false);
+
+        // Limpiamos el mensaje de error si existía
+        mensajeNotificacion = string.Empty;
     }
 
     private void RemoverVariante(VariantePrenda variante)
@@ -268,13 +272,13 @@
     {
         if (string.IsNullOrWhiteSpace(nuevaPrenda.CodigoIdentificador) || string.IsNullOrWhiteSpace(nuevaPrenda.Marca) || nuevaPrenda.CategoriaId == 0)
         {
-            MostrarMensaje("Complete los campos obligatorios de la Ficha Maestra (Código, Marca y Categoría).", true);
+            await MostrarMensaje("Complete los campos obligatorios de la Ficha Maestra (Código, Marca y Categoría).", true);
             return;
         }
 
         if (!variantesAgregadas.Any())
         {
-            MostrarMensaje("Debe agregar al menos una variante (Talla/Color) antes de guardar la prenda.", true);
+            await MostrarMensaje("Debe agregar al menos una variante (Talla/Color) antes de guardar la prenda.", true);
             return;
         }
 
@@ -286,17 +290,25 @@
             variantesAgregadas.Clear();
             tallasDisponibles.Clear();
 
-            MostrarMensaje("¡La prenda y sus variantes fueron guardadas exitosamente en el sistema!", false);
+            await MostrarMensaje("¡La prenda y sus variantes fueron guardadas exitosamente en el sistema!", false);
         }
         catch (Exception ex)
         {
-            MostrarMensaje($"Ocurrió un error al guardar en la base de datos: {ex.Message}", true);
+            await MostrarMensaje($"Ocurrió un error al guardar en la base de datos: {ex.Message}", true);
         }
     }
 
-    private void MostrarMensaje(string mensaje, bool error)
+    private async Task MostrarMensaje(string mensaje, bool error)
     {
         mensajeNotificacion = mensaje;
         esError = error;
+        StateHasChanged();
+
+        if (!error)
+        {
+            await Task.Delay(4000);
+            mensajeNotificacion = string.Empty;
+            StateHasChanged();
+        }
     }
 }

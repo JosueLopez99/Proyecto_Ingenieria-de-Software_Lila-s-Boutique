@@ -8,8 +8,21 @@
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject CustomAuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
 
 <PageTitle>Acceso - Lila's Boutique</PageTitle>
+
+@if (!string.IsNullOrEmpty(mensajeError))
+{
+    <div class="alert alerta-flotante error d-flex align-items-center shadow-lg" role="alert">
+        <i class="bi bi-x-octagon-fill text-danger fs-3 me-3"></i>
+        <div class="flex-grow-1">
+            <h6 class="alert-heading fw-bold mb-1">Atención</h6>
+            <p class="mb-0 small">@mensajeError</p>
+        </div>
+        <button type="button" class="btn-close ms-2" @onclick="() => mensajeError = string.Empty"></button>
+    </div>
+}
 
 <div class="card shadow-lg border-0" style="width: 450px; border-radius: 1rem;">
     <div class="card-body p-5">
@@ -21,32 +34,27 @@
         <EditForm Model="loginModel" OnValidSubmit="ValidarLogin" FormName="loginForm">
             <DataAnnotationsValidator />
 
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Correo Electrónico:</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                    <InputText @bind-Value="loginModel.Correo" class="form-control form-control-lg" placeholder="usuario@lilasboutique.com" />
+            <div class="bg-light p-4 rounded-3 border mb-4">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary small">Correo Electrónico:</label>
+                    <div class="input-group shadow-sm">
+                        <span class="input-group-text bg-white"><i class="bi bi-envelope"></i></span>
+                        <InputText @bind-Value="loginModel.Correo" class="form-control form-control-lg border-start-0" placeholder="usuario@lilasboutique.com" />
+                    </div>
                 </div>
-            </div>
 
-            <div class="mb-4">
-                <label class="form-label fw-semibold">Contraseña:</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                    <InputText @bind-Value="loginModel.Password" type="password" class="form-control form-control-lg" placeholder="••••••••" />
+                <div class="mb-2">
+                    <label class="form-label fw-semibold text-secondary small">Contraseña:</label>
+                    <div class="input-group shadow-sm">
+                        <span class="input-group-text bg-white"><i class="bi bi-lock"></i></span>
+                        <InputText @bind-Value="loginModel.Password" type="password" class="form-control form-control-lg border-start-0" placeholder="••••••••" />
+                    </div>
                 </div>
             </div>
 
             <div class="d-grid">
                 <button type="submit" class="btn btn-primary btn-lg fw-bold shadow-sm">Ingresar al Sistema</button>
             </div>
-
-            @if (!string.IsNullOrEmpty(mensajeError))
-            {
-                <div class="alert alert-danger mt-3 text-center" style="font-size: 0.9rem;">
-                    @mensajeError
-                </div>
-            }
         </EditForm>
     </div>
 </div>
@@ -63,20 +71,33 @@
 
         if (usuario != null && usuario.EstadoActivo && BCrypt.Net.BCrypt.Verify(loginModel.Password, usuario.HashCredencial))
         {
-            // Actualizamos el estado de autenticación en memoria mediante nuestro proveedor custom
+            // 1. Guardamos la cookie
+            await JS.InvokeVoidAsync("eval", $"document.cookie = 'lila_user={usuario.Correo}; path=/; max-age=604800; samesite=strict';");
+
+            // 2. Actualizamos la memoria
             await AuthStateProvider.ActualizarEstadoAutenticacion(usuario);
 
-            // Redirigimos según el rol del usuario de manera fluida
+            // 3. REDIRIGIMOS CON forceLoad: true PARA QUE EL SERVIDOR LEA LA COOKIE AL INSTANTE
             if (usuario.Rol.NombreRol == "Administrador")
-                Navigation.NavigateTo("/dashboard");
+                Navigation.NavigateTo("/dashboard", forceLoad: true);
             else if (usuario.Rol.NombreRol == "Vendedor")
-                Navigation.NavigateTo("/catalogos");
+                Navigation.NavigateTo("/catalogos", forceLoad: true);
             else
-                Navigation.NavigateTo("/bodega");
+                Navigation.NavigateTo("/bodega", forceLoad: true);
         }
         else
         {
-            mensajeError = "Credenciales incorrectas o usuario inactivo.";
+            await MostrarError("Credenciales incorrectas o usuario inactivo.");
         }
+    }
+
+    private async Task MostrarError(string mensaje)
+    {
+        mensajeError = mensaje;
+        StateHasChanged();
+
+        await Task.Delay(5000);
+        mensajeError = string.Empty;
+        StateHasChanged();
     }
 }

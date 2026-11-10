@@ -1,6 +1,7 @@
 ﻿using LilasBoutique.Components;
 using LilasBoutique.Data;
 using LilasBoutique.Models;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,23 +22,33 @@ builder.Services.AddScoped<IInventarioService, InventarioService>();
 builder.Services.AddScoped<IBodegaService, BodegaService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 
-// 1. Registramos tu proveedor de autenticación personalizado
-builder.Services.AddScoped<CustomAuthenticationStateProvider>();
+// 1. Contexto HTTP necesario para leer/escribir cookies de sesión en F5
+builder.Services.AddHttpContextAccessor();
 
-// 2. Le indicamos a Blazor que el AuthenticationStateProvider global ES tu proveedor personalizado
+// 2. Configuración de autenticación por Cookies nativa de ASP.NET Core
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    });
+
+// 3. Proveedor de autenticación personalizado
+builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
     provider.GetRequiredService<CustomAuthenticationStateProvider>());
 
-// 3. Activamos la autorización nativa para componentes de Blazor
+// 4. Autorización y cascada de estado
 builder.Services.AddAuthorizationCore();
+builder.Services.AddCascadingAuthenticationState();
 
-// 4. Configuraciones de Blazor Server
+// 5. Configuraciones de Blazor Server
 builder.Services.AddServerSideBlazor(options =>
 {
     options.DetailedErrors = true;
 });
 
-// 5. Antiforgery configurado en la fase de servicios (ANTES del builder.Build)
+// 6. Antiforgery configurado en la fase de servicios
 builder.Services.AddAntiforgery();
 
 var app = builder.Build();
@@ -52,6 +63,12 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
+app.UseRouting();
+
+// ⚠️ IMPORTANTÍSIMO: Estos dos middlewares deben estar aquí para procesar la cookie en cada F5
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
@@ -64,7 +81,6 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<LilaBoutiqueContext>();
 
-    // 1. Crear los roles si no existen
     if (!context.Rol.Any())
     {
         context.Rol.AddRange(
@@ -75,7 +91,6 @@ using (var scope = app.Services.CreateScope())
         context.SaveChanges();
     }
 
-    // 2. Comprobar y sembrar los roles individuales de manera segura
     var rolAdmin = context.Rol.FirstOrDefault(r => r.NombreRol == "Administrador");
     var rolVendedor = context.Rol.FirstOrDefault(r => r.NombreRol == "Vendedor");
     var rolBodeguero = context.Rol.FirstOrDefault(r => r.NombreRol == "Bodeguero");

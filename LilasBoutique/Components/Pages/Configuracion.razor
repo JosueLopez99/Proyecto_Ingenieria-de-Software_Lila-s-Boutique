@@ -1,6 +1,5 @@
 ﻿@page "/configuracion"
 @rendermode InteractiveServer
-@attribute [Authorize]
 @using LilasBoutique.DTOs
 @using LilasBoutique.Data
 @using System.Security.Claims
@@ -16,10 +15,13 @@
 
         @if (!string.IsNullOrEmpty(mensajeNotificacion))
         {
-            <div class="alert @(esError ? "alert-danger" : "alert-success") shadow-sm d-flex align-items-center mb-4" role="alert">
-                <i class="bi @(esError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill") me-3 fs-5"></i>
-                <div>@mensajeNotificacion</div>
-                <button type="button" class="btn-close ms-auto" @onclick="() => mensajeNotificacion = string.Empty"></button>
+            <div class="alert alerta-flotante @(esError ? "error" : "exito") d-flex align-items-center shadow-lg" role="alert">
+                <i class="bi @(esError ? "bi-x-octagon-fill text-danger" : "bi-check-circle-fill text-success") fs-3 me-3"></i>
+                <div class="flex-grow-1">
+                    <h6 class="alert-heading fw-bold mb-1">@(esError ? "Atención" : "Operación Exitosa")</h6>
+                    <p class="mb-0 small">@mensajeNotificacion</p>
+                </div>
+                <button type="button" class="btn-close ms-2" @onclick="() => mensajeNotificacion = string.Empty"></button>
             </div>
         }
 
@@ -69,14 +71,14 @@
             string.IsNullOrWhiteSpace(cambiocontraseña.Nueva) ||
             string.IsNullOrWhiteSpace(cambiocontraseña.Confirmacion))
         {
-            MostrarMensaje("Existen campos vacíos. Por favor, complete todos los campos de seguridad.", true);
+            await MostrarMensaje("Existen campos vacíos. Por favor, complete todos los campos de seguridad.", true);
             return;
         }
 
         // 2. Validar que la nueva contraseña coincida con su confirmación
         if (cambiocontraseña.Nueva != cambiocontraseña.Confirmacion)
         {
-            MostrarMensaje("La confirmación no coincide con la nueva contraseña.", true);
+            await MostrarMensaje("La confirmación no coincide con la nueva contraseña.", true);
             return;
         }
 
@@ -95,26 +97,34 @@
                     // Encriptamos la nueva contraseña y la guardamos en base de datos
                     await UsuarioService.ActualizarPassword(usuarioId, BCrypt.Net.BCrypt.HashPassword(cambiocontraseña.Nueva));
 
-                    MostrarMensaje("¡La contraseña ha sido actualizada exitosamente!", false);
+                    await MostrarMensaje("¡La contraseña ha sido actualizada exitosamente!", false);
 
                     // Limpiamos el formulario tras el éxito
                     cambiocontraseña = new CambioContraseñaDTO();
                 }
                 else
                 {
-                    MostrarMensaje("Error de sesión: No se pudo identificar al usuario activo.", true);
+                    await MostrarMensaje("Error de sesión: No se pudo identificar al usuario activo.", true);
                 }
             }
         }
         catch (Exception ex)
         {
-            MostrarMensaje($"Ocurrió un error al actualizar: {ex.Message}", true);
+            await MostrarMensaje($"Ocurrió un error al actualizar: {ex.Message}", true);
         }
     }
 
-    private void MostrarMensaje(string mensaje, bool error)
+    private async Task MostrarMensaje(string mensaje, bool error)
     {
         mensajeNotificacion = mensaje;
         esError = error;
+        StateHasChanged();
+
+        if (!error)
+        {
+            await Task.Delay(4000);
+            mensajeNotificacion = string.Empty;
+            StateHasChanged();
+        }
     }
 }

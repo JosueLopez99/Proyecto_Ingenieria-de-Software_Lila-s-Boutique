@@ -1,4 +1,4 @@
-html, body {
+﻿html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
@@ -13,7 +13,7 @@ a, .btn-link {
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
 .content {
@@ -49,3 +49,149 @@ h1:focus {
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
 }
+
+/* ==================================================
+   1. Transiciones suaves y acabados premium
+================================================== */
+body, .card, .btn, .form-control, .modal-content, .form-select, h3, h4, h5, h6, label {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card {
+    border-radius: 12px !important;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.05) !important;
+}
+
+.btn, .form-control, .form-select {
+    border-radius: 8px !important;
+}
+
+/* ==================================================
+   2. Reglas Inteligentes del Modo Oscuro (Bootstrap 5)
+================================================== */
+[data-bs-theme="dark"] body {
+    background-color: #121212 !important;
+    color: #e0e0e0 !important;
+}
+
+/* Forzar fondos oscuros en contenedores principales y elementos rebeldes */
+[data-bs-theme="dark"] .card,
+[data-bs-theme="dark"] .modal-content,
+[data-bs-theme="dark"] .top-row,
+[data-bs-theme="dark"] .bg-white,
+[data-bs-theme="dark"] .bg-light,
+[data-bs-theme="dark"] .list-group-item,
+[data-bs-theme="dark"] .input-group-text,
+[data-bs-theme="dark"] .accordion-container,
+[data-bs-theme="dark"] .alerta-flotante {
+    background-color: #1e1e1e !important;
+    color: #e0e0e0 !important;
+    border-color: #333 !important;
+}
+
+/* -----------------------------------------------------
+   FORZAR TEXTOS CLAROS (Solución a textos invisibles)
+------------------------------------------------------ */
+[data-bs-theme="dark"] .text-dark,
+[data-bs-theme="dark"] .text-secondary,
+[data-bs-theme="dark"] .text-muted,
+[data-bs-theme="dark"] h3,
+[data-bs-theme="dark"] h4,
+[data-bs-theme="dark"] h5,
+[data-bs-theme="dark"] h6,
+[data-bs-theme="dark"] strong,
+[data-bs-theme="dark"] label,
+[data-bs-theme="dark"] i.text-muted,
+[data-bs-theme="dark"] td, /* Forzar todo el texto suelto de las celdas */
+[data-bs-theme="dark"] tr, /* Forzar todo el texto de las filas */
+[data-bs-theme="dark"] li, /* Forzar listas (Categorías, tallas, etc) */
+[data-bs-theme="dark"] span { /* Forzar spans genéricos */
+    color: #e0e0e0 !important;
+}
+
+/* Excepción: Mantener colores vivos en insignias (badges) y textos semánticos */
+[data-bs-theme="dark"] .text-primary {
+    color: #3b82f6 !important;
+}
+
+[data-bs-theme="dark"] .text-success {
+    color: #10b981 !important;
+}
+
+[data-bs-theme="dark"] .text-danger {
+    color: #ef4444 !important;
+}
+
+[data-bs-theme="dark"] .text-warning {
+    color: #f59e0b !important;
+}
+
+/* Arreglar el fondo de las tablas */
+[data-bs-theme="dark"] .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: #e0e0e0;
+    --bs-table-hover-bg: #2a2a2a;
+    border-color: #444;
+}
+
+    [data-bs-theme="dark"] .table-light th,
+    [data-bs-theme="dark"] .table thead th,
+    [data-bs-theme="dark"] th {
+        background-color: #2c2c2c !important;
+        color: #fff !important;
+        border-bottom: 2px solid #555 !important;
+    }
+
+/* Arreglar inputs en modo oscuro para que se lean bien */
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+    background-color: #2c2c2c !important;
+    color: #fff !important;
+    border-color: #555 !important;
+}
+
+    [data-bs-theme="dark"] .form-control:focus,
+    [data-bs-theme="dark"] .form-select:focus {
+        background-color: #333 !important;
+        color: #fff !important;
+        border-color: #3b82f6 !important;
+    }
+
+/* ==================================================
+   3. Diseño de la Notificación Flotante (Toast)
+================================================== */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.alerta-flotante {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1055;
+    min-width: 320px;
+    max-width: 400px;
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    border: none;
+    border-left: 6px solid;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+    animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+    .alerta-flotante.exito {
+        border-left-color: #198754;
+    }
+
+    .alerta-flotante.error {
+        border-left-color: #dc3545;
+    }

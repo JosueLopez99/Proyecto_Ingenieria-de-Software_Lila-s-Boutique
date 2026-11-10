@@ -11,10 +11,13 @@
 
 @if (!string.IsNullOrEmpty(mensajeNotificacion))
 {
-    <div class="alert @(esError ? "alert-danger" : "alert-success") alert-dismissible fade show shadow-sm" role="alert">
-        <i class="bi @(esError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill") me-2"></i>
-        @mensajeNotificacion
-        <button type="button" class="btn-close" @onclick="() => mensajeNotificacion = string.Empty"></button>
+    <div class="alert alerta-flotante @(esError ? "error" : "exito") d-flex align-items-center shadow-lg" role="alert">
+        <i class="bi @(esError ? "bi-x-octagon-fill text-danger" : "bi-check-circle-fill text-success") fs-3 me-3"></i>
+        <div class="flex-grow-1">
+            <h6 class="alert-heading fw-bold mb-1">@(esError ? "Atención" : "Operación Exitosa")</h6>
+            <p class="mb-0 small">@mensajeNotificacion</p>
+        </div>
+        <button type="button" class="btn-close ms-2" @onclick="() => mensajeNotificacion = string.Empty"></button>
     </div>
 }
 
@@ -50,7 +53,7 @@
                                 <button type="button" class="btn btn-sm btn-outline-primary border-0" title="Editar" @onclick="() => EditarCategoria(cat)">
                                     <i class="bi bi-pencil-fill"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger border-0" title="Eliminar" @onclick="() => BorrarCategoria(cat.IdCategoria)">
+                                <button type="button" class="btn btn-sm btn-outline-danger border-0" title="Eliminar" @onclick="() => IniciarEliminacionCategoria(cat.IdCategoria)">
                                     <i class="bi bi-trash-fill"></i>
                                 </button>
                             </div>
@@ -94,7 +97,6 @@
 
                 <h6 class="fw-bold text-secondary border-bottom pb-2 mb-3">Tallas por Categoría:</h6>
 
-                @* Lógica de agrupación por categorías *@
                 <div class="accordion-container" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
                     @foreach (var cat in categorias)
                     {
@@ -121,7 +123,7 @@
                                                     <button type="button" class="btn btn-sm text-primary p-0 me-2" title="Editar" @onclick="() => EditarTalla(talla)">
                                                         <i class="bi bi-pencil-fill"></i>
                                                     </button>
-                                                    <button type="button" class="btn btn-sm text-danger p-0" title="Eliminar" @onclick="() => BorrarTalla(talla.IdTalla)">
+                                                    <button type="button" class="btn btn-sm text-danger p-0" title="Eliminar" @onclick="() => IniciarEliminacionTalla(talla.IdTalla)">
                                                         <i class="bi bi-trash-fill"></i>
                                                     </button>
                                                 </div>
@@ -168,7 +170,7 @@
                                 <button type="button" class="btn btn-sm btn-outline-warning border-0" title="Editar" @onclick="() => EditarColor(color)">
                                     <i class="bi bi-pencil-fill"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger border-0" title="Eliminar" @onclick="() => BorrarColor(color.IdColor)">
+                                <button type="button" class="btn btn-sm btn-outline-danger border-0" title="Eliminar" @onclick="() => IniciarEliminacionColor(color.IdColor)">
                                     <i class="bi bi-trash-fill"></i>
                                 </button>
                             </div>
@@ -179,6 +181,73 @@
         </div>
     </div>
 </div>
+
+<!-- ================= MODALES DE CONFIRMACIÓN ================= -->
+@if (mostrarModalEliminarCategoria)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Eliminar Categoría</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModales"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="bi bi-trash3 text-danger display-4 mb-3"></i>
+                    <p class="fs-5 mb-1">¿Está seguro de que desea eliminar esta categoría?</p>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModales">Cancelar</button>
+                    <button type="button" class="btn btn-danger fw-bold" @onclick="BorrarCategoria">Sí, Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (mostrarModalEliminarTalla)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Eliminar Talla</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModales"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="bi bi-trash3 text-danger display-4 mb-3"></i>
+                    <p class="fs-5 mb-1">¿Está seguro de que desea eliminar esta talla?</p>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModales">Cancelar</button>
+                    <button type="button" class="btn btn-danger fw-bold" @onclick="BorrarTalla">Sí, Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (mostrarModalEliminarColor)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Eliminar Color</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModales"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="bi bi-trash3 text-danger display-4 mb-3"></i>
+                    <p class="fs-5 mb-1">¿Está seguro de que desea eliminar este color?</p>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModales">Cancelar</button>
+                    <button type="button" class="btn btn-danger fw-bold" @onclick="BorrarColor">Sí, Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private string mensajeNotificacion = "";
@@ -191,6 +260,14 @@
     private List<Categoria> categorias = new();
     private List<Talla> tallas = new();
     private List<Color> colores = new();
+
+    // Variables para Modales
+    private bool mostrarModalEliminarCategoria = false;
+    private bool mostrarModalEliminarTalla = false;
+    private bool mostrarModalEliminarColor = false;
+    private int idEliminarCategoria = 0;
+    private int idEliminarTalla = 0;
+    private int idEliminarColor = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -255,7 +332,7 @@
     {
         if (string.IsNullOrWhiteSpace(nuevaCategoria.NombreCategoria))
         {
-            MostrarMensaje("Por favor, escribe un nombre para la Categoría.", true);
+            await MostrarMensaje("Por favor, escribe un nombre para la Categoría.", true);
             return;
         }
 
@@ -264,12 +341,12 @@
             if (nuevaCategoria.IdCategoria == 0)
             {
                 await InventarioService.AgregarCategoria(nuevaCategoria);
-                MostrarMensaje("¡Categoría guardada exitosamente!", false);
+                await MostrarMensaje("¡Categoría guardada exitosamente!", false);
             }
             else
             {
                 await InventarioService.ActualizarCategoria(nuevaCategoria);
-                MostrarMensaje("¡Categoría actualizada exitosamente!", false);
+                await MostrarMensaje("¡Categoría actualizada exitosamente!", false);
             }
 
             nuevaCategoria = new Categoria();
@@ -277,7 +354,7 @@
         }
         catch (Exception ex)
         {
-            MostrarMensaje($"Error al guardar categoría: {ex.Message}", true);
+            await MostrarMensaje($"Error al guardar categoría: {ex.Message}", true);
         }
     }
 
@@ -285,7 +362,7 @@
     {
         if (nuevaTalla.CategoriaId == 0 || string.IsNullOrWhiteSpace(nuevaTalla.NombreTalla))
         {
-            MostrarMensaje("Por favor, selecciona una categoría y escribe un nombre para la Talla.", true);
+            await MostrarMensaje("Por favor, selecciona una categoría y escribe un nombre para la Talla.", true);
             return;
         }
 
@@ -294,12 +371,12 @@
             if (nuevaTalla.IdTalla == 0)
             {
                 await InventarioService.AgregarTalla(nuevaTalla);
-                MostrarMensaje("¡Talla guardada exitosamente!", false);
+                await MostrarMensaje("¡Talla guardada exitosamente!", false);
             }
             else
             {
                 await InventarioService.ActualizarTalla(nuevaTalla);
-                MostrarMensaje("¡Talla actualizada exitosamente!", false);
+                await MostrarMensaje("¡Talla actualizada exitosamente!", false);
             }
 
             nuevaTalla = new Talla();
@@ -307,7 +384,7 @@
         }
         catch (Exception ex)
         {
-            MostrarMensaje($"Error al guardar talla: {ex.Message}", true);
+            await MostrarMensaje($"Error al guardar talla: {ex.Message}", true);
         }
     }
 
@@ -315,7 +392,7 @@
     {
         if (string.IsNullOrWhiteSpace(nuevoColor.NombreColor))
         {
-            MostrarMensaje("Por favor, escribe un nombre para el Color.", true);
+            await MostrarMensaje("Por favor, escribe un nombre para el Color.", true);
             return;
         }
 
@@ -324,12 +401,12 @@
             if (nuevoColor.IdColor == 0)
             {
                 await InventarioService.AgregarColor(nuevoColor);
-                MostrarMensaje("¡Color guardado exitosamente!", false);
+                await MostrarMensaje("¡Color guardado exitosamente!", false);
             }
             else
             {
                 await InventarioService.ActualizarColor(nuevoColor);
-                MostrarMensaje("¡Color actualizado exitosamente!", false);
+                await MostrarMensaje("¡Color actualizado exitosamente!", false);
             }
 
             nuevoColor = new Color();
@@ -337,56 +414,99 @@
         }
         catch (Exception ex)
         {
-            MostrarMensaje($"Error al guardar color: {ex.Message}", true);
+            await MostrarMensaje($"Error al guardar color: {ex.Message}", true);
         }
+    }
+
+    // --- MÉTODOS PARA INICIAR ELIMINACIÓN (MOSTRAR MODAL) ---
+    private void IniciarEliminacionCategoria(int id)
+    {
+        idEliminarCategoria = id;
+        mostrarModalEliminarCategoria = true;
+    }
+
+    private void IniciarEliminacionTalla(int id)
+    {
+        idEliminarTalla = id;
+        mostrarModalEliminarTalla = true;
+    }
+
+    private void IniciarEliminacionColor(int id)
+    {
+        idEliminarColor = id;
+        mostrarModalEliminarColor = true;
     }
 
     // --- MÉTODOS DE BORRADO ---
-    private async Task BorrarCategoria(int id)
+    private async Task BorrarCategoria()
     {
         try
         {
-            await InventarioService.EliminarCategoria(id);
+            await InventarioService.EliminarCategoria(idEliminarCategoria);
             await CargarListas();
-            MostrarMensaje("Categoría eliminada correctamente.", false);
+            CerrarModales();
+            await MostrarMensaje("Categoría eliminada correctamente.", false);
         }
         catch (Exception)
         {
-            MostrarMensaje("No se puede eliminar: Esta categoría ya está siendo usada o tiene tallas vinculadas.", true);
+            CerrarModales();
+            await MostrarMensaje("No se puede eliminar: Esta categoría ya está siendo usada o tiene tallas vinculadas.", true);
         }
     }
 
-    private async Task BorrarTalla(int id)
+    private async Task BorrarTalla()
     {
         try
         {
-            await InventarioService.EliminarTalla(id);
+            await InventarioService.EliminarTalla(idEliminarTalla);
             await CargarListas();
-            MostrarMensaje("Talla eliminada correctamente.", false);
+            CerrarModales();
+            await MostrarMensaje("Talla eliminada correctamente.", false);
         }
         catch (Exception)
         {
-            MostrarMensaje("No se puede eliminar: Esta talla ya está asignada a una prenda en el inventario.", true);
+            CerrarModales();
+            await MostrarMensaje("No se puede eliminar: Esta talla ya está asignada a una prenda en el inventario.", true);
         }
     }
 
-    private async Task BorrarColor(int id)
+    private async Task BorrarColor()
     {
         try
         {
-            await InventarioService.EliminarColor(id);
+            await InventarioService.EliminarColor(idEliminarColor);
             await CargarListas();
-            MostrarMensaje("Color eliminado correctamente.", false);
+            CerrarModales();
+            await MostrarMensaje("Color eliminado correctamente.", false);
         }
         catch (Exception)
         {
-            MostrarMensaje("No se puede eliminar: Este color ya está asignado a una prenda en el inventario.", true);
+            CerrarModales();
+            await MostrarMensaje("No se puede eliminar: Este color ya está asignado a una prenda en el inventario.", true);
         }
     }
 
-    private void MostrarMensaje(string mensaje, bool error)
+    private void CerrarModales()
+    {
+        mostrarModalEliminarCategoria = false;
+        mostrarModalEliminarTalla = false;
+        mostrarModalEliminarColor = false;
+        idEliminarCategoria = 0;
+        idEliminarTalla = 0;
+        idEliminarColor = 0;
+    }
+
+    private async Task MostrarMensaje(string mensaje, bool error)
     {
         mensajeNotificacion = mensaje;
         esError = error;
+        StateHasChanged();
+
+        if (!error)
+        {
+            await Task.Delay(4000);
+            mensajeNotificacion = string.Empty;
+            StateHasChanged();
+        }
     }
 }

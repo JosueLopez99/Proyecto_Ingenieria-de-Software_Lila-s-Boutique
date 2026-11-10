@@ -1,6 +1,8 @@
 ﻿@inherits LayoutComponentBase
 @using System.Security.Claims
+@using LilasBoutique.Data
 @using Microsoft.AspNetCore.Components.Authorization
+@inject IJSRuntime JS
 
 <div class="page">
     <div class="sidebar">
@@ -8,8 +10,7 @@
     </div>
 
     <main>
-        <!-- Barra superior modificada para mostrar el rol del usuario -->
-        <div class="top-row px-4 d-flex justify-content-between align-items-center">
+        <div class="top-row px-4 d-flex justify-content-between align-items-center bg-white shadow-sm mb-3">
             <AuthorizeView>
                 <Authorized>
                     <div class="d-flex align-items-center">
@@ -19,7 +20,15 @@
                     </div>
                 </Authorized>
             </AuthorizeView>
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+
+            <div class="d-flex align-items-center">
+                <!-- Botón de Cambio de Tema (Modo Oscuro/Claro) -->
+                <button class="btn btn-outline-secondary border-0 rounded-circle me-3" @onclick="ToggleTheme" title="Cambiar tema">
+                    <i class="bi @(isDarkMode ? "bi-sun-fill text-warning" : "bi-moon-stars-fill text-dark") fs-5"></i>
+                </button>
+
+                <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            </div>
         </div>
 
         <article class="content px-4">
@@ -33,3 +42,23 @@
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
+@code {
+    private bool isDarkMode = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Sincronizar únicamente el Modo Oscuro al recargar o abrir
+            var theme = await JS.InvokeAsync<string>("localStorage.getItem", "theme");
+            isDarkMode = theme == "dark";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        isDarkMode = !isDarkMode;
+        await JS.InvokeVoidAsync("setModoOscuro", isDarkMode);
+    }
+}

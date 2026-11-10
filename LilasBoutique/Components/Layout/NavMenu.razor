@@ -13,20 +13,19 @@
         <AuthorizeView Roles="Administrador">
             <Authorized>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="dashboard" Match="NavLinkMatch.All">
+                    <a class="nav-link" href="dashboard" data-enhance-nav="false">
                         <span class="bi bi-speedometer2" aria-hidden="true"></span> Dashboard
-                    </NavLink>
+                    </a>
                 </div>
             </Authorized>
         </AuthorizeView>
 
-        <!-- Se añade Bodeguero para que pueda ver el acceso al catálogo -->
         <AuthorizeView Roles="Administrador, Vendedor, Bodeguero">
             <Authorized>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="catalogos">
+                    <a class="nav-link" href="catalogos" data-enhance-nav="false">
                         <span class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></span> Catálogos
-                    </NavLink>
+                    </a>
                 </div>
             </Authorized>
         </AuthorizeView>
@@ -34,9 +33,9 @@
         <AuthorizeView Roles="Administrador, Bodeguero">
             <Authorized>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="bodega">
+                    <a class="nav-link" href="bodega" data-enhance-nav="false">
                         <span class="bi bi-box-seam-fill" aria-hidden="true"></span> Bodega
-                    </NavLink>
+                    </a>
                 </div>
             </Authorized>
         </AuthorizeView>
@@ -44,9 +43,9 @@
         <AuthorizeView Roles="Administrador">
             <Authorized>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="registrar-prenda">
+                    <a class="nav-link" href="registrar-prenda" data-enhance-nav="false">
                         <span class="bi bi-tags-fill" aria-hidden="true"></span> Registrar Prenda
-                    </NavLink>
+                    </a>
                 </div>
                 <div class="nav-item px-3">
                     <a class="nav-link" href="parametros" data-enhance-nav="false">
@@ -54,9 +53,9 @@
                     </a>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="usuarios">
+                    <a class="nav-link" href="usuarios" data-enhance-nav="false">
                         <span class="bi bi-people-fill" aria-hidden="true"></span> Usuarios (RBAC)
-                    </NavLink>
+                    </a>
                 </div>
             </Authorized>
         </AuthorizeView>
@@ -64,9 +63,9 @@
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3 mt-4 border-top pt-2 border-secondary">
-                    <NavLink class="nav-link" href="configuracion">
+                    <a class="nav-link" href="configuracion" data-enhance-nav="false">
                         <span class="bi bi-shield-lock-fill" aria-hidden="true"></span> Seguridad
-                    </NavLink>
+                    </a>
                 </div>
                 <div class="nav-item px-3">
                     <button type="button" class="nav-link btn btn-link w-100 text-start text-white" @onclick="CerrarSesion">
@@ -78,7 +77,7 @@
 
     </nav>
 </div>
-
+@inject IJSRuntime JS
 @code {
     [Inject]
     private CustomAuthenticationStateProvider AuthStateProvider { get; set; } = default!;
@@ -88,7 +87,12 @@
 
     private async Task CerrarSesion()
     {
+        // Borramos la cookie
+        await JS.InvokeVoidAsync("eval", "document.cookie = 'lila_user=; path=/; max-age=0;';");
+
         await AuthStateProvider.ActualizarEstadoAutenticacion(null);
+
+        // Redirigimos forzando la recarga para limpiar el circuito del servidor
         Navigation.NavigateTo("/", forceLoad: true);
     }
 }

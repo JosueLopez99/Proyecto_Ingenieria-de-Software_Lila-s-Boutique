@@ -10,10 +10,13 @@
 
 @if (!string.IsNullOrEmpty(mensajeNotificacion))
 {
-    <div class="alert @(esError ? "alert-danger" : "alert-success") alert-dismissible fade show shadow-sm" role="alert">
-        <i class="bi @(esError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill") me-2"></i>
-        @mensajeNotificacion
-        <button type="button" class="btn-close" @onclick="() => mensajeNotificacion = string.Empty"></button>
+    <div class="alert alerta-flotante @(esError ? "error" : "exito") d-flex align-items-center" role="alert">
+        <i class="bi @(esError ? "bi-x-octagon-fill text-danger" : "bi-check-circle-fill text-success") fs-3 me-3"></i>
+        <div class="flex-grow-1">
+            <h6 class="alert-heading fw-bold mb-1">@(esError ? "Atención" : "Operación Exitosa")</h6>
+            <p class="mb-0 small">@mensajeNotificacion</p>
+        </div>
+        <button type="button" class="btn-close ms-2" @onclick="() => mensajeNotificacion = string.Empty"></button>
     </div>
 }
 
@@ -75,8 +78,6 @@
     private int varianteSeleccionadaId = 0;
     private int cantidadAfectada = 0;
     private string justificacion = "";
-
-    // NUEVA VARIABLE PARA ALMACENAR EL USUARIO
     private string correoUsuarioActual = "";
 
     private List<VariantePrenda> catalogoCompleto = new();
@@ -104,7 +105,6 @@
             return;
         }
 
-        // CAPTURA DEL USUARIO REAL DESDE LA SESIÓN
         correoUsuarioActual = user.Identity?.Name ?? "";
 
         try
@@ -114,7 +114,7 @@
         }
         catch (Exception ex)
         {
-            MostrarMensaje($"Error al cargar el inventario: {ex.Message}", true);
+            await MostrarMensaje($"Error al cargar el inventario: {ex.Message}", true);
         }
     }
 
@@ -144,24 +144,23 @@
     {
         if (varianteSeleccionadaId == 0)
         {
-            MostrarMensaje("Debe seleccionar una variante del catálogo.", true); return;
+            await MostrarMensaje("Debe seleccionar una variante del catálogo.", true); return;
         }
         if (cantidadAfectada <= 0)
         {
-            MostrarMensaje("La cantidad afectada debe ser mayor a cero.", true); return;
+            await MostrarMensaje("La cantidad afectada debe ser mayor a cero.", true); return;
         }
         if (string.IsNullOrWhiteSpace(justificacion))
         {
-            MostrarMensaje("Debe ingresar una justificación para este movimiento.", true); return;
+            await MostrarMensaje("Debe ingresar una justificación para este movimiento.", true); return;
         }
 
         try
         {
-            // CORREGIDO: Enviamos correoUsuarioActual en lugar del número 1 fijo
             await InventarioService.RegistrarMovimientoBodega(varianteSeleccionadaId, tipoOperacion, cantidadAfectada, correoUsuarioActual, justificacion);
 
             string nombreOp = tipoOperacion == "RECEPCION_PROVEEDOR" ? "sumado" : "restado";
-            MostrarMensaje($"Movimiento registrado exitosamente. Se ha {nombreOp} {cantidadAfectada} al stock.", false);
+            await MostrarMensaje($"Movimiento registrado exitosamente. Se ha {nombreOp} {cantidadAfectada} al stock.", false);
 
             catalogoCompleto = await InventarioService.ObtenerCatalogo();
             FiltrarVariantes();
@@ -178,13 +177,21 @@
             {
                 errorReal += " | Detalle SQL: " + ex.InnerException.Message;
             }
-            MostrarMensaje($"Error de Base de Datos: {errorReal}", true);
+            await MostrarMensaje($"Error de Base de Datos: {errorReal}", true);
         }
     }
 
-    private void MostrarMensaje(string mensaje, bool error)
+    private async Task MostrarMensaje(string mensaje, bool error)
     {
         mensajeNotificacion = mensaje;
         esError = error;
+        StateHasChanged();
+
+        if (!error)
+        {
+            await Task.Delay(4000);
+            mensajeNotificacion = string.Empty;
+            StateHasChanged();
+        }
     }
 }

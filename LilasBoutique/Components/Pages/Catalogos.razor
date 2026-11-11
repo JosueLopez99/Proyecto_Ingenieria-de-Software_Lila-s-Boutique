@@ -175,7 +175,7 @@
 
                     <label class="form-label fw-bold">Cantidad a Vender:</label>
                     <!-- Se agregó la clase global 'solo-enteros' -->
-                    <input type="number" @bind="cantidadVenta" class="form-control form-control-lg text-center solo-enteros" min="1" max="@varianteSeleccionada?.StockFisicoActual" />
+                    <input type="number" class="form-control form-control-lg text-center fw-bold" min="1" max="@varianteSeleccionada?.StockFisicoActual" @bind="cantidadVenta" onkeydown="if(event.key === '.' || event.key === ',' || event.key === '+' || event.key === '-') event.preventDefault();" oninput="this.value = this.value.replace(/[.,].*/g, '');" />
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" @onclick="CerrarModales">Cancelar</button>
@@ -503,7 +503,7 @@
         idVarianteAEliminar = id;
         mostrarModalEliminacion = true;
     }
-
+        
     private void CerrarModales()
     {
         mostrarModalVenta = false;

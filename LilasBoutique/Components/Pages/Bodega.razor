@@ -33,7 +33,7 @@
         <div class="col-md-6">
             <label class="form-label text-secondary small">Cantidad Física Afectada</label>
             <!-- Validación nativa corregida usando window.event para evitar advertencias de Visual Studio -->
-            <InputNumber class="form-control text-primary fw-bold solo-enteros" @bind-Value="cantidadAfectada" min="1" />
+            <InputNumber class="form-control text-primary fw-bold" @bind-Value="cantidadAfectada" min="1" onkeydown="if(event.key === '.' || event.key === ',' || event.key === '+' || event.key === '-') event.preventDefault();" oninput="this.value = this.value.replace(/[.,].*/g, '');" />
         </div>
     </div>
 

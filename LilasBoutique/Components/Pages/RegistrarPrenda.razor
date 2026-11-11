@@ -90,11 +90,11 @@
                     </div>
                     <div class="col-md-6 mt-2">
                         <label class="form-label small fw-semibold text-success">Stock Inicial (Unidades)</label>
-                        <InputNumber @bind-Value="varianteActual.StockFisicoActual" class="form-control border-success solo-enteros" min="0" />
+                        <InputNumber @bind-Value="varianteActual.StockFisicoActual" class="form-control border-success" min="0" onkeydown="if(event.key === '.' || event.key === ',' || event.key === '+' || event.key === '-') event.preventDefault();" oninput="this.value = this.value.replace(/[.,].*/g, '');" />
                     </div>
                     <div class="col-md-6 mt-2">
                         <label class="form-label small fw-semibold text-warning">Alerta Desabastecimiento</label>
-                        <InputNumber @bind-Value="varianteActual.LimiteAlerta" class="form-control border-warning solo-enteros" min="0" />
+                        <InputNumber @bind-Value="varianteActual.LimiteAlerta" class="form-control border-warning" min="0" onkeydown="if(event.key === '.' || event.key === ',' || event.key === '+' || event.key === '-')  event.preventDefault();" oninput="this.value = this.value.replace(/[.,].*/g, '');" />
                     </div>
                     <div class="col-12 mt-3">
                         <button class="btn btn-outline-primary w-100" @onclick="AgregarVariante">
@@ -269,18 +269,14 @@
         mensajeNotificacion = string.Empty;
     }
 
-    /// <summary>
     /// Elimina una variante de la tabla temporal.
-    /// </summary>
     private void RemoverVariante(VariantePrenda variante)
     {
         variantesAgregadas.Remove(variante);
     }
 
-    /// <summary>
     /// Ejecuta la validación final y envía la Prenda y todas sus variantes anidadas
     /// a la capa de persistencia para ser guardadas mediante una transacción SQL.
-    /// </summary>
     private async Task GuardarPrenda()
     {
         if (string.IsNullOrWhiteSpace(nuevaPrenda.CodigoIdentificador) || string.IsNullOrWhiteSpace(nuevaPrenda.Marca) || nuevaPrenda.CategoriaId == 0)
@@ -316,9 +312,7 @@
 
     #region Control de Notificaciones
 
-    /// <summary>
     /// Dispara un Toast informativo (Error o Éxito) gestionado en un hilo de fondo.
-    /// </summary>
     private Task MostrarMensaje(string msj, bool error)
     {
         mensajeNotificacion = msj;

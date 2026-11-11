@@ -48,15 +48,17 @@ Para este proyecto se empleará Blazor para el front-end y C# para el back-end, 
 
 
 
-4\. Como ejecutarla de forma local
+4\. Como ejecutar el programa de forma local
 
 
 
-&#x09;1) Descargar los archivos del repositorio de GitHub
+1\) Descargar los archivos del repositorio de GitHub.
 
-&#x09;2) Restaura la base de datos desde Microsoft SQl Server
-	3) Abre la solución del programa en Visual Studio
-	4) Compila
+2\) Entra a la carpeta del repositorio y elimina los archivos internos de las siguientes carpetas: .git, .vs, bin y obj.
+3) Restaura la base de datos desde Microsoft SQl Server.
+4) Abre la solución del programa en Visual Studio.
 
+5\) Ubica el archivo appsetting.json y cambia la cadena de conexion por defecto por la de tu maquina actual.
 
+6\) Compila y usa las siguientes las credenciales proporcionadas para acceder.
 

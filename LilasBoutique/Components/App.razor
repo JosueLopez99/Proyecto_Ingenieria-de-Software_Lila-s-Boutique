@@ -25,9 +25,8 @@
 
     <!-- Script Directo: Evita el error 404 de Linux/Docker -->
     <script>
-            // ==========================================
+
             // GESTIÓN DE TEMAS (MODO CLARO/OSCURO)
-            // ==========================================
             window.setModoOscuro = (isDark) => {
                 const theme = isDark ? 'dark' : 'light';
                 document.documentElement.setAttribute('data-bs-theme', theme);
@@ -41,11 +40,22 @@
             })();
 
             // ==========================================
-            // EVENTOS DE TECLADO NATIVOS
+            // EVENTOS DE TECLADO NATIVOS (DELEGACIÓN DE EVENTOS)
             // ==========================================
             document.addEventListener('keydown', function (e) {
-                if (e.target && e.target.classList.contains('solo-enteros')) {
-                    if (['.', '+', '-', 'e', 'E', ','].includes(e.key)) {
+                if (!e.target || !e.target.classList) return;
+
+                // REGLA 1: Solo Enteros (Para Stock y Límite de Alerta)
+                if (e.target.classList.contains('solo-enteros')) {
+                    // Bloquea signos matemáticos, letra 'e', coma y PUNTO DECIMAL
+                    if (['+', '-', 'e', 'E', ','].includes(e.key)) {
+                        e.preventDefault();
+                    }
+                }
+                // REGLA 2: Solo Decimales (Para Precios)
+                else if (e.target.classList.contains('solo-decimales')) {
+                    // Bloquea signos matemáticos, letra 'e' y coma (PERMITE EL PUNTO)
+                    if (['+', '-', 'e', 'E', ','].includes(e.key)) {
                         e.preventDefault();
                     }
                 }

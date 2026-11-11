@@ -22,7 +22,34 @@
 
     <!-- Framework Blazor -->
     <script src="_framework/blazor.web.js"></script>
-    <!-- Script Global (Gestión de Modo Oscuro y Eventos Nativos) -->
-    <script src="js/site.js?v=4.0"></script>
+
+    <!-- Script Directo: Evita el error 404 de Linux/Docker -->
+    <script>
+            // ==========================================
+            // GESTIÓN DE TEMAS (MODO CLARO/OSCURO)
+            // ==========================================
+            window.setModoOscuro = (isDark) => {
+                const theme = isDark ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-bs-theme', theme);
+                localStorage.setItem('theme', theme);
+            };
+
+            // Autoejecutable: revisa el LocalStorage
+            (function () {
+                const theme = localStorage.getItem('theme') || 'light';
+                document.documentElement.setAttribute('data-bs-theme', theme);
+            })();
+
+            // ==========================================
+            // EVENTOS DE TECLADO NATIVOS
+            // ==========================================
+            document.addEventListener('keydown', function (e) {
+                if (e.target && e.target.classList.contains('solo-enteros')) {
+                    if (['.', '+', '-', 'e', 'E', ','].includes(e.key)) {
+                        e.preventDefault();
+                    }
+                }
+            });
+    </script>
 </body>
 </html>

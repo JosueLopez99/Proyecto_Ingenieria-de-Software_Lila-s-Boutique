@@ -1,4 +1,4 @@
-/* _content/LilasBoutique/Components/Layout/MainLayout.razor.rz.scp.css */
+/* /Components/Layout/MainLayout.razor.rz.scp.css */
 .page[b-t3sy2t33he] {
     position: relative;
     display: flex;
@@ -95,7 +95,7 @@ main[b-t3sy2t33he] {
         right: 0.75rem;
         top: 0.5rem;
     }
-/* _content/LilasBoutique/Components/Layout/NavMenu.razor.rz.scp.css */
+/* /Components/Layout/NavMenu.razor.rz.scp.css */
 .navbar-toggler[b-6kvf4ysd93] {
     appearance: none;
     cursor: pointer;

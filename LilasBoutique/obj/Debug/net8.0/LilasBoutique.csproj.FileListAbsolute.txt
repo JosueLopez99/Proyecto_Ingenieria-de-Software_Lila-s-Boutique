@@ -10,13 +10,7 @@ C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Azure.Core.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Azure.Identity.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\BCrypt-Net-Next.dll
-C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Blazor-ApexCharts.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Humanizer.dll
-C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.AspNetCore.Authorization.dll
-C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.AspNetCore.Components.dll
-C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.AspNetCore.Components.Forms.dll
-C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.AspNetCore.Components.Web.dll
-C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.AspNetCore.Metadata.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.Bcl.AsyncInterfaces.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.Build.Locator.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.CodeAnalysis.dll
@@ -37,9 +31,6 @@ C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.Extensions.DependencyModel.dll
-C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.Extensions.Diagnostics.dll
-C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.Extensions.Diagnostics.Abstractions.dll
-C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.Extensions.Http.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.Extensions.Logging.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
@@ -52,7 +43,6 @@ C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.IdentityModel.Tokens.dll
-C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.JSInterop.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.SqlServer.Server.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Microsoft.Win32.SystemEvents.dll
 C:\Users\admin\Documents\GitHub\Proyecto_Ingenieria-de-Software_Lila-s-Boutique\LilasBoutique\bin\Debug\net8.0\Mono.TextTemplating.dll

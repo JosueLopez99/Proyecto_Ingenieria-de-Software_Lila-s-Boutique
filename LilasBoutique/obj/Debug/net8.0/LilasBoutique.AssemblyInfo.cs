@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LilasBoutique")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b593777876ad74fcb83489ee703681ffe3089af2")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+71587ebd34affd3840ee295a8a48ef27f53aaca1")]
 [assembly: System.Reflection.AssemblyProductAttribute("LilasBoutique")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LilasBoutique")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
